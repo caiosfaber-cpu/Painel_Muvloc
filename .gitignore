@@ -1,7 +1,0 @@
-.clasprc*
-**/.clasprc*
-.clasp.json
-.env
-.env.*
-node_modules/
-*.zip
