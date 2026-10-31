@@ -476,23 +476,99 @@ async function confirmarOrcamentoSalvoUI(o) {
   }catch(e){avisoContratos(e.message||'Não foi possível reservar. Edite e recalcule o orçamento.','erro')}
   finally{contratosOcupado=false}
 }
+const DIA_VENCIMENTO = 86400000;
+function estadoVencimentoContrato(c,agora=Date.now()) {
+  if(c.status!=='ATIVO')return {tipo:'finalizado',texto:'Contrato finalizado',percentual:null};
+  if(c.modalidade==='ABERTO')return {tipo:'aberto',texto:'Prazo em aberto — sem vencimento definido',percentual:null};
+  const prazo=c.vencimento;
+  if(!prazo || prazo.invalido || !Number.isFinite(prazo.fimMs) || !Number.isFinite(prazo.inicioReferenciaMs) || prazo.fimMs<=prazo.inicioReferenciaMs)
+    return {tipo:'invalido',texto:'Confira a data e o horário de vencimento',percentual:null};
+  const restante=prazo.fimMs-agora;
+  const percentual=Math.max(0,Math.min(100,100*restante/(prazo.fimMs-prazo.inicioReferenciaMs)));
+  function duracao(ms,atraso){
+    if(ms>=DIA_VENCIMENTO){const dias=Math.floor(ms/DIA_VENCIMENTO),horas=Math.floor((ms%DIA_VENCIMENTO)/3600000);return {singular:dias===1&&horas===0,texto:dias+(dias===1?' dia':' dias')+(horas?' e '+horas+'h':'')};}
+    if(ms<60000)return {valor:0,texto:'menos de 1 min'};
+    const minutos=Math.floor(ms/60000),horas=Math.floor(minutos/60),min=minutos%60;
+    return {valor:minutos,texto:horas+'h '+String(min).padStart(2,'0')+'min'};
+  }
+  const d=duracao(Math.abs(restante),restante<=0);
+  return {tipo:restante<=0?'vencido':'andamento',restante,fimMs:prazo.fimMs,percentual,matiz:120*percentual/100,
+    texto:restante<=0?(restante===0?'Vencido agora':'Vencido há '+d.texto):((restante>=DIA_VENCIMENTO&&d.singular?'Falta ':'Faltam ')+d.texto)};
+}
+function dataISOContratosNoFuso(agora,fuso) {
+  try {
+    const partes=new Intl.DateTimeFormat('en-CA',{timeZone:fuso,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(agora));
+    const v=Object.fromEntries(partes.map(p=>[p.type,p.value]));return `${v.year}-${v.month}-${v.day}`;
+  }catch(_erro){return '';}
+}
+function filtrarVencimentoContrato(c,estado,filtro,de,ate,agora=Date.now()) {
+  if((de||ate)&&(!/^\d{4}-\d{2}-\d{2}$/.test(c.fim||'')||(de&&c.fim<de)||(ate&&c.fim>ate)))return false;
+  if(!filtro||filtro==='todos')return true;
+  if(c.status!=='ATIVO')return false;
+  if(filtro==='aberto')return estado.tipo==='aberto';
+  if(filtro==='invalido')return estado.tipo==='invalido';
+  if(!Number.isFinite(estado.restante))return false;
+  if(filtro==='vencidos')return estado.restante<=0;
+  if(filtro==='hoje')return c.fim===dataISOContratosNoFuso(agora,c.vencimento.fuso);
+  const dias={dia:1,tres:3,semana:7,mes:30}[filtro];
+  return !!dias&&estado.restante>0&&estado.restante<=dias*DIA_VENCIMENTO;
+}
+function compararContratosVencimento(a,b,ordem='vencimento') {
+  if(a.status!==b.status)return a.status==='ATIVO'?-1:1;
+  if(ordem==='vencimento'&&a.status==='ATIVO'){
+    const prazo=c=>c.modalidade==='ABERTO'||c.vencimento?.invalido||!Number.isFinite(c.vencimento?.fimMs)?Infinity:c.vencimento.fimMs;
+    const pa=prazo(a),pb=prazo(b);if(pa!==pb)return pa<pb?-1:1;
+  }
+  return ordem==='antigos'?a.id.localeCompare(b.id):b.id.localeCompare(a.id);
+}
+function criarAvisoVencimento(c,estado) {
+  const aviso=document.createElement('div');aviso.className='prazo-contrato '+(estado.percentual==null?'prazo-neutro':'prazo-colorido');
+  const texto=document.createElement('strong');texto.className='prazo-contador';texto.textContent=estado.texto;
+  if(c.status==='ATIVO')texto.setAttribute('role','timer');aviso.append(texto);
+  if(estado.percentual!=null){
+    aviso.style.setProperty('--prazo-cor',`hsl(${estado.matiz} 78% 26%)`);
+    aviso.style.setProperty('--prazo-fundo',`hsl(${estado.matiz} 65% 94%)`);
+    const data=document.createElement('small');data.textContent=`Vencimento: ${encerramentoTexto(c.fim,c.vencimento.hora)} · ${c.vencimento.fuso}`+(c.vencimento.horarioPadrao?' · horário não registrado: referência 23:59':'');aviso.append(data);
+    const barra=document.createElement('div');barra.className='prazo-barra';barra.setAttribute('role','progressbar');barra.setAttribute('aria-label','Percentual de prazo restante');barra.setAttribute('aria-valuemin','0');barra.setAttribute('aria-valuemax','100');barra.setAttribute('aria-valuenow',String(Math.round(estado.percentual)));
+    const preenchimento=document.createElement('span');preenchimento.style.width=estado.percentual+'%';barra.append(preenchimento);aviso.append(barra);
+  }
+  return aviso;
+}
+function atualizarRelogioContratos() {
+  if(document.hidden||$c('painel-contratos').hidden||contratosOcupado||document.querySelector('dialog[open]'))return;
+  const foco=document.activeElement?.closest('#contratos-ativos button, #contratos-historico button');
+  const idFoco=foco?.closest('.contract-card')?.getAttribute('data-contrato-id'),rotulo=foco?.textContent;
+  const rolagem=window.scrollY;
+  renderListaContratos();
+  if(idFoco){
+    const card=[...document.querySelectorAll('#contratos-ativos .contract-card, #contratos-historico .contract-card')].find(el=>el.getAttribute('data-contrato-id')===idFoco);
+    const botao=card&&[...card.querySelectorAll('button')].find(el=>el.textContent===rotulo);
+    (botao||$c('contratos-vencimento')).focus({preventScroll:true});
+  }
+  window.scrollTo({top:rolagem,behavior:'instant'});
+}
+
 function renderListaContratos() {
   const ativos=$c('contratos-ativos'),historico=$c('contratos-historico');
   ativos.replaceChildren();historico.replaceChildren();
   const termo=$c('contratos-busca').value.trim().toLocaleLowerCase('pt-BR');
   const status=$c('contratos-status').value;
   const dataDe=$c('contratos-inicio-de').value,dataAte=$c('contratos-inicio-ate').value;
+  const agora=Date.now(),vencDe=$c('contratos-vencimento-de').value,vencAte=$c('contratos-vencimento-ate').value;
+  const filtroVencimento=$c('contratos-vencimento').value;
+  const prazos=new Map(contratos.map(c=>[c.id,estadoVencimentoContrato(c,agora)]));
   $c('bloco-ativos').hidden=status==='FINALIZADO';
   $c('bloco-historico').hidden=status==='ATIVO';
   const ordenados=contratos.filter(c=>
     (status==='todos'||c.status===status)&&(!dataDe||c.inicio>=dataDe)&&(!dataAte||c.inicio<=dataAte)&&
+    filtrarVencimentoContrato(c,prazos.get(c.id),filtroVencimento,vencDe,vencAte,agora)&&
     (!termo||[c.id,c.cliente,c.documento,c.telefone,c.endereco,c.enderecoLocacao,
       ...c.itens.flatMap(i=>[i.codigo,i.categoria])].some(v=>String(v).toLocaleLowerCase('pt-BR').includes(termo)))
-  ).sort((a,b)=>$c('contratos-ordem').value==='antigos'?a.id.localeCompare(b.id):b.id.localeCompare(a.id));
+  ).sort((a,b)=>compararContratosVencimento(a,b,$c('contratos-ordem').value||'vencimento'));
   let totalAtivos=0,totalHistorico=0;
   for(const c of ordenados){
-    const card=document.createElement('article');card.className='item contract-card';
-    const titulo=document.createElement('strong');titulo.textContent=`${c.id} · ${c.cliente}`;card.append(titulo);
+    const card=document.createElement('article');card.className='item contract-card';card.setAttribute('data-contrato-id',c.id);
+    const titulo=document.createElement('strong');titulo.textContent=`${c.id} · ${c.cliente}`;card.append(titulo,criarAvisoVencimento(c,prazos.get(c.id)));
     const detalhes=document.createElement('p');
     detalhes.textContent=`${c.documento} · início ${dataBR(c.inicio)} · último dia ${encerramentoTexto(c.fim,c.horaFim)} · ${moedaContrato.format(c.total)}`;
     if(c.modalidade==='ABERTO'&&c.status==='ATIVO')detalhes.textContent=`PRAZO EM ABERTO · início ${dataBR(c.inicio)} às ${c.horaInicio} · sem término definido · valor final a apurar (referência ${moedaContrato.format(c.total)})`;
@@ -777,8 +853,10 @@ $c('form-configuracao-contrato').addEventListener('submit',async event=>{
   }catch(e){avisoContratos(e.message||'Falha ao salvar dados do contrato.','erro')}
   finally{contratosOcupado=false;$c('salvar-configuracao-contrato').disabled=false}
 });
-['contratos-busca','contratos-status','contratos-ordem','contratos-inicio-de','contratos-inicio-ate']
+['contratos-busca','contratos-status','contratos-ordem','contratos-inicio-de','contratos-inicio-ate','contratos-vencimento','contratos-vencimento-de','contratos-vencimento-ate']
   .forEach(id=>$c(id).addEventListener(id==='contratos-busca'?'input':'change',renderListaContratos));
+setInterval(atualizarRelogioContratos,60000);
+document.addEventListener('visibilitychange',atualizarRelogioContratos);
 $c('escopo-orcamento').addEventListener('change',atualizarAlvosOrcamento);
 $c('aplicar-orcamento').addEventListener('click',()=>{
   const codigos=unidadesDoEscopo();

@@ -101,7 +101,7 @@ function listarContratos() {
   return lerContratos_(contratos).map(c => ({ id: c.id, cliente: c.cliente,
     documento: c.documento, telefone: c.telefone, endereco: c.endereco,
     modalidade: c.modalidade, horaInicio: c.horaInicio, fuso: c.fuso, inicio: c.inicio, enderecoLocacao: c.enderecoLocacao, horaFim: c.horaFim, status: c.status, subtotal: c.subtotal,
-    desconto: c.desconto, frete: c.frete, total: c.total, fim: c.fim,
+    desconto: c.desconto, frete: c.frete, total: c.total, fim: c.fim, vencimento: rastreamentoVencimentoContrato_(c),
     finalizadoEm: c.finalizado ? Utilities.formatDate(c.finalizado, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm') : '',
     itens: linhas.filter(i => i.contratoId === c.id).map(i => ({ id: i.id, inicio: i.blocos[0]?.inicioLocacao || c.inicio, horaInicio: i.blocos[0]?.horaInicioLocacao || c.horaInicio, codigo: i.codigo,
       categoriaId: i.categoriaId, categoria: i.categoria, blocos: i.blocos,
@@ -357,4 +357,19 @@ function validarFrete_(entrada) {
   if(!Number.isFinite(valor) || valor<0 || Math.round(valor*100)/100!==valor || !Number.isSafeInteger(Math.round(valor*100)))
     throw new Error('Informe um frete válido, não negativo, com até duas casas decimais.');
   return valor;
+}
+
+/** Datas absolutas evitam interpretar o vencimento no fuso do navegador. Não altera registros. */
+function rastreamentoVencimentoContrato_(c) {
+  const fuso=c.fuso||Session.getScriptTimeZone();
+  if(c.modalidade==='ABERTO'&&c.status==='ATIVO')return {semPrazo:true,fuso};
+  try {
+    const hora=c.horaFim||'23:59';
+    const fimMs=instanteLocacaoAberta_(c.fim,hora,fuso).getTime();
+    const inicio=instanteLocacaoAberta_(c.inicio,hora,fuso).getTime();
+    if(fimMs<inicio)throw new Error('Vencimento anterior ao início.');
+    // A data inicial não contém hora nos contratos fixos. Para a cor, usa o horário final
+    // como referência e no mínimo 24h, inclusive nos registros antigos de mesmo dia.
+    return {fuso,hora,fimMs,inicioReferenciaMs:Math.min(inicio,fimMs-86400000),horarioPadrao:!c.horaFim,semPrazo:false};
+  }catch(_erro){return {fuso,invalido:true,semPrazo:false};}
 }
