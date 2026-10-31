@@ -1,5 +1,5 @@
-/** Painel_Muvloc v19 — cadastro, locações e controle financeiro. */
-const MUVLOC_VERSAO = 'v19';
+/** Painel_Muvloc v20 — painel financeiro com panorama anual, análise mensal e investimentos. */
+const MUVLOC_VERSAO = 'v20';
 const MUVLOC_ABA_ENDERECOS = 'EnderecosLocacao';
 const MUVLOC_CAB_ENDERECOS = ['ID', 'ID do cliente', 'Endereço de locação', 'Criado em'];
 const MUVLOC_ABA_CLIENTES = 'Clientes';
@@ -38,7 +38,7 @@ function configurar() {
   configurarFinanceiro_(planilha);
   PropertiesService.getScriptProperties().setProperty(PROP_PLANILHA, planilha.getId());
   sincronizarContratosFinalizadosFinanceiro_();
-  return 'Cadastros, contratos, auditoria financeira e lançamentos configurados.';
+  return 'Cadastros, contratos, auditoria financeira, lançamentos e relatórios configurados.';
 }
 
 function listarClientes() {

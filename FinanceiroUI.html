@@ -1,17 +1,29 @@
 <section id="painel-financeiro" hidden>
   <div id="aviso-financeiro" role="status" aria-live="polite"></div>
+  <nav class="finance-subnav" aria-label="Visões financeiras">
+    <button type="button" data-fin-view="panorama" aria-selected="true">Panorama anual</button>
+    <button type="button" data-fin-view="mensal" aria-selected="false">Análise mensal</button>
+    <button type="button" data-fin-view="investimentos" aria-selected="false">Investimentos</button>
+    <button type="button" data-fin-view="lancamentos" aria-selected="false">Lançamentos</button>
+  </nav>
+  <div class="finance-toolbar"><div><label for="financeiro-ano">Ano do relatório</label><select id="financeiro-ano"></select></div>
+    <button id="atualizar-financeiro" class="secondary" type="button">Atualizar</button>
+    <button id="novo-lancamento-financeiro" class="primary" type="button">+ Novo lançamento</button></div>
+  <section class="finance-view" data-fin-panel="panorama">
   <section class="card" aria-labelledby="titulo-financeiro">
-    <div class="list-head"><div><h2 id="titulo-financeiro">Controle financeiro</h2>
-      <p class="muted">Entradas aprovadas, pagamentos, despesas e investimentos. O saldo considera somente valores recebidos ou pagos.</p></div>
-      <button id="novo-lancamento-financeiro" class="primary" type="button">+ Novo lançamento</button></div>
-    <div class="finance-toolbar"><div><label for="financeiro-ano">Ano do relatório</label><select id="financeiro-ano"></select></div>
-      <button id="atualizar-financeiro" class="secondary" type="button">Atualizar</button></div>
+    <div class="list-head"><div><h2 id="titulo-financeiro">Panorama anual</h2>
+      <p class="muted">Acompanhe entradas, despesas, investimentos e saldo mensal. O caixa considera somente valores recebidos ou pagos.</p></div></div>
     <div class="finance-kpis">
       <article class="finance-kpi"><span>Entradas recebidas</span><strong id="fin-total-entradas">R$ 0,00</strong><small id="fin-total-receber">A receber: R$ 0,00</small></article>
       <article class="finance-kpi"><span>Despesas pagas</span><strong id="fin-total-despesas">R$ 0,00</strong><small id="fin-total-pagar">A pagar: R$ 0,00</small></article>
       <article class="finance-kpi"><span>Investimentos pagos</span><strong id="fin-total-investimentos">R$ 0,00</strong><small id="fin-total-invest-previstos">Previstos: R$ 0,00</small></article>
       <article class="finance-kpi saldo"><span>Saldo de caixa</span><strong id="fin-saldo">R$ 0,00</strong><small id="fin-saldo-projetado">Saldo previsto: R$ 0,00</small></article>
     </div>
+  </section>
+  <section class="card finance-report" aria-labelledby="titulo-grafico-anual">
+    <h2 id="titulo-grafico-anual">Entradas, despesas e investimentos por mês</h2>
+    <p class="muted">Passe o cursor sobre as barras para consultar os valores.</p>
+    <div id="grafico-anual-financeiro" class="finance-chart" role="img" aria-label="Gráfico anual de entradas, despesas e investimentos"></div>
   </section>
   <section class="card finance-report" aria-labelledby="titulo-panorama">
     <h2 id="titulo-panorama">Panorama anual por mês</h2>
@@ -23,6 +35,31 @@
     <div class="finance-table-wrap" style="margin-top:12px"><table><thead><tr><th>Categoria</th><th>Entradas</th><th>Despesas</th><th>Investimentos</th><th>A receber</th><th>A pagar</th><th>Participação nas despesas</th></tr></thead>
       <tbody id="financeiro-categorias"></tbody></table></div>
   </details>
+  </section>
+  <section class="finance-view" data-fin-panel="mensal" hidden>
+    <section class="card"><div class="list-head"><div><h2>Análise mensal</h2><p class="muted">Confira a distribuição das despesas e os valores registrados no mês selecionado.</p></div>
+      <div><label for="financeiro-mes">Mês</label><select id="financeiro-mes"></select></div></div>
+      <div class="finance-kpis finance-kpis-month">
+        <article class="finance-kpi"><span>Entradas recebidas</span><strong id="fin-mes-entradas">R$ 0,00</strong><small id="fin-mes-receber">A receber: R$ 0,00</small></article>
+        <article class="finance-kpi"><span>Despesas pagas</span><strong id="fin-mes-despesas">R$ 0,00</strong><small id="fin-mes-pagar">A pagar: R$ 0,00</small></article>
+        <article class="finance-kpi"><span>Investimentos</span><strong id="fin-mes-investimentos">R$ 0,00</strong><small>Registrados no mês</small></article>
+        <article class="finance-kpi saldo"><span>Saldo de caixa</span><strong id="fin-mes-saldo">R$ 0,00</strong><small id="fin-mes-projetado">Saldo previsto: R$ 0,00</small></article>
+      </div>
+    </section>
+    <div class="finance-chart-grid">
+      <section class="card finance-report"><h2>Despesas por categoria</h2><p class="muted">Passe o cursor sobre as barras para ver valor e participação.</p><div id="grafico-mensal-categorias" class="finance-chart" role="img" aria-label="Despesas por categoria do mês"></div></section>
+      <section class="card finance-report"><h2>Valores por forma de pagamento</h2><p class="muted">Somente lançamentos baixados no mês.</p><div id="grafico-mensal-formas" class="finance-chart" role="img" aria-label="Valores por forma de pagamento no mês"></div></section>
+    </div>
+    <section class="card finance-report"><h2>Resumo por categoria no mês</h2><div class="finance-table-wrap"><table><thead><tr><th>Categoria</th><th>Entradas</th><th>Despesas</th><th>Investimentos</th><th>% das despesas</th></tr></thead><tbody id="financeiro-categorias-mes"></tbody></table></div></section>
+  </section>
+  <section class="finance-view" data-fin-panel="investimentos" hidden>
+    <section class="card"><h2>Investimentos e reservas</h2><p class="muted">Acompanhe a evolução mensal e a composição por categoria. Registre categorias como Reserva, Renda fixa ou Renda variável para compará-las separadamente.</p>
+      <div class="finance-kpis"><article class="finance-kpi"><span>Investido no ano</span><strong id="fin-invest-ano">R$ 0,00</strong><small>Valores pagos</small></article><article class="finance-kpi"><span>Previsto</span><strong id="fin-invest-previsto">R$ 0,00</strong><small>Valores pendentes</small></article><article class="finance-kpi saldo"><span>Média mensal</span><strong id="fin-invest-media">R$ 0,00</strong><small>Considera os 12 meses do ano</small></article></div>
+    </section>
+    <section class="card finance-report"><h2>Investimentos por mês e categoria</h2><p class="muted">As barras mostram os valores pagos. Passe o cursor sobre cada segmento para consultar a categoria e o valor.</p><div id="grafico-investimentos" class="finance-chart" role="img" aria-label="Investimentos mensais por categoria"></div><div id="legenda-investimentos" class="finance-legend"></div></section>
+    <section class="card finance-report"><h2>Composição anual</h2><div class="finance-table-wrap"><table><thead><tr><th>Categoria</th><th>Investido</th><th>Previsto</th><th>Participação</th></tr></thead><tbody id="financeiro-invest-categorias"></tbody></table></div></section>
+  </section>
+  <section class="finance-view" data-fin-panel="lancamentos" hidden>
   <section class="card" aria-labelledby="titulo-lancamentos">
     <h2 id="titulo-lancamentos">Lançamentos</h2>
     <div class="filter-grid">
@@ -31,6 +68,7 @@
       <div><label for="financeiro-status">Situação</label><select id="financeiro-status"><option value="TODOS">Todas</option><option value="PENDENTE">Pendentes</option><option value="BAIXADO">Recebidos ou pagos</option></select></div>
     </div>
     <div id="lista-lancamentos-financeiros" class="finance-list"><p class="vazio">Carregando lançamentos…</p></div>
+  </section>
   </section>
   <dialog id="form-lancamento-financeiro" class="lateral-form" aria-labelledby="titulo-form-lancamento">
     <div class="list-head"><h2 id="titulo-form-lancamento">Novo lançamento</h2><button id="fechar-form-financeiro" class="secondary" type="button">Fechar</button></div>
@@ -62,18 +100,78 @@
   const byId=id=>document.getElementById(id);
   const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const dinheiro=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+  const cores=['#805000','#bd7a16','#406b47','#477b92','#8a5366','#6d62a5','#4d6173','#b45c35'];
   let resumo=null,lancamentos=[],ocupado=false,recarregarPendente=false,filtroTimer=null;
   function aviso(msg,tipo=''){byId('aviso-financeiro').textContent=msg;byId('aviso-financeiro').className=tipo;}
   function hoje(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   function br(iso){if(!iso)return '—';const [a,m,d]=iso.split('-');return d+'/'+m+'/'+a;}
   function preencherAnos(){const select=byId('financeiro-ano');if(select.options.length)return;
     const atual=new Date().getFullYear();for(let ano=atual-3;ano<=atual+2;ano++){const o=document.createElement('option');o.value=ano;o.textContent=String(ano);select.append(o);}select.value=String(atual);}
+  function preencherMeses(){const select=byId('financeiro-mes');if(select.options.length)return;
+    meses.forEach((nome,i)=>{const o=document.createElement('option');o.value=String(i+1);o.textContent=nome;select.append(o);});
+    const atual=new Date().getMonth()+1;select.value=String(atual);}
+  function barra(label,value,max,cor,tooltip){
+    const linha=document.createElement('div');linha.className='finance-bar-row';
+    const nome=document.createElement('span');nome.className='finance-bar-label';nome.textContent=label;
+    const trilho=document.createElement('div');trilho.className='finance-bar-track';
+    const fill=document.createElement('span');fill.className='finance-bar-fill';fill.style.width=(max>0?Math.max(value>0?1:0,Math.min(100,value/max*100)):0)+'%';fill.style.backgroundColor=cor;fill.title=tooltip;fill.setAttribute('aria-label',tooltip);trilho.append(fill);
+    const valor=document.createElement('strong');valor.className='finance-bar-value';valor.textContent=dinheiro.format(value);linha.append(nome,trilho,valor);return linha;
+  }
+  function semDados(container,msg){const p=document.createElement('p');p.className='vazio';p.textContent=msg;container.append(p);}
+  function renderGraficoAnual(){
+    const area=byId('grafico-anual-financeiro');area.replaceChildren();
+    const max=Math.max(0,...resumo.meses.flatMap(m=>[m.entradas,m.despesas,m.investimentos]));
+    if(!max){semDados(area,'Sem valores recebidos, pagos ou investidos neste ano.');return;}
+    resumo.meses.forEach(m=>{const grupo=document.createElement('div');grupo.className='finance-chart-group';
+      const titulo=document.createElement('strong');titulo.className='finance-chart-month';titulo.textContent=meses[m.mes-1];grupo.append(titulo);
+      grupo.append(barra('Entradas',m.entradas,max,'#406b47',`Entradas recebidas · ${meses[m.mes-1]}: ${dinheiro.format(m.entradas)}`));
+      grupo.append(barra('Despesas',m.despesas,max,'#a44b3f',`Despesas pagas · ${meses[m.mes-1]}: ${dinheiro.format(m.despesas)}`));
+      grupo.append(barra('Investimentos',m.investimentos,max,'#bd7a16',`Investimentos pagos · ${meses[m.mes-1]}: ${dinheiro.format(m.investimentos)}`));area.append(grupo);
+    });
+  }
+  function renderAnaliseMensal(){
+    const m=resumo.meses[Number(byId('financeiro-mes').value||1)-1];if(!m)return;
+    byId('fin-mes-entradas').textContent=dinheiro.format(m.entradas);byId('fin-mes-receber').textContent='A receber: '+dinheiro.format(m.aReceber);
+    byId('fin-mes-despesas').textContent=dinheiro.format(m.despesas);byId('fin-mes-pagar').textContent='A pagar: '+dinheiro.format(m.aPagar);
+    byId('fin-mes-investimentos').textContent=dinheiro.format(m.investimentos);byId('fin-mes-saldo').textContent=dinheiro.format(m.saldo);
+    byId('fin-mes-projetado').textContent='Saldo previsto: '+dinheiro.format(m.saldoProjetado);
+    const despesas=(m.categorias||[]).filter(c=>c.despesas>0),area=byId('grafico-mensal-categorias');area.replaceChildren();
+    const max=Math.max(0,...despesas.map(c=>c.despesas));
+    if(!despesas.length)semDados(area,'Sem despesas pagas no mês selecionado.');
+    despesas.forEach((c,i)=>area.append(barra(c.categoria,c.despesas,max,cores[i%cores.length],`${c.categoria} · ${meses[m.mes-1]}: ${dinheiro.format(c.despesas)} (${new Intl.NumberFormat('pt-BR',{style:'percent',maximumFractionDigits:1}).format(m.despesas?c.despesas/m.despesas:0)} das despesas)`)));
+    const formas=byId('grafico-mensal-formas');formas.replaceChildren();const maxForma=Math.max(0,...(m.formasPagamento||[]).map(x=>x.valor));
+    if(!maxForma)semDados(formas,'Sem lançamentos baixados no mês selecionado.');
+    (m.formasPagamento||[]).forEach((x,i)=>formas.append(barra(x.forma,x.valor,maxForma,cores[i%cores.length],`${x.forma} · ${meses[m.mes-1]}: ${dinheiro.format(x.valor)}`)));
+    const tbody=byId('financeiro-categorias-mes');tbody.replaceChildren();
+    const percent=new Intl.NumberFormat('pt-BR',{style:'percent',maximumFractionDigits:1});
+    (m.categorias||[]).forEach(c=>{const tr=document.createElement('tr');[c.categoria,dinheiro.format(c.entradas),dinheiro.format(c.despesas),dinheiro.format(c.investimentos),m.despesas?percent.format(c.despesas/m.despesas):'—'].forEach((v,i)=>{const td=document.createElement(i?'td':'th');td.textContent=v;tr.append(td);});tbody.append(tr);});
+    if(!tbody.children.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.textContent='Sem lançamentos neste mês.';tr.append(td);tbody.append(tr);}
+  }
+  function renderInvestimentos(){
+    const totais=resumo.totais,area=byId('grafico-investimentos');area.replaceChildren();
+    byId('fin-invest-ano').textContent=dinheiro.format(totais.investimentos);byId('fin-invest-previsto').textContent=dinheiro.format(totais.investimentosPrevistos);
+    byId('fin-invest-media').textContent=dinheiro.format(totais.investimentos/12);
+    const nomes=[...new Set(resumo.meses.flatMap(m=>(m.investimentosPorCategoria||[]).map(x=>x.categoria)))];
+    const max=Math.max(0,...resumo.meses.map(m=>m.investimentos));
+    const legenda=byId('legenda-investimentos');legenda.replaceChildren();
+    nomes.forEach((nome,i)=>{const item=document.createElement('span');item.className='finance-legend-item';const swatch=document.createElement('i');swatch.style.backgroundColor=cores[i%cores.length];const text=document.createElement('span');text.textContent=nome;item.append(swatch,text);legenda.append(item);});
+    if(!max)semDados(area,'Sem investimentos pagos neste ano.');
+    resumo.meses.forEach(m=>{const grupo=document.createElement('div');grupo.className='finance-chart-group';const nome=document.createElement('strong');nome.className='finance-chart-month';nome.textContent=meses[m.mes-1];grupo.append(nome);
+      const linha=document.createElement('div');linha.className='finance-bar-row';const label=document.createElement('span');label.className='finance-bar-label';label.textContent='Total investido';
+      const trilho=document.createElement('div');trilho.className='finance-bar-track finance-stacked-track';
+      (m.investimentosPorCategoria||[]).forEach(x=>{const seg=document.createElement('span');seg.className='finance-bar-fill finance-stack-segment';seg.style.width=(max>0?x.valor/max*100:0)+'%';const ix=nomes.indexOf(x.categoria);seg.style.backgroundColor=cores[ix%cores.length];seg.title=`${x.categoria} · ${meses[m.mes-1]}: ${dinheiro.format(x.valor)}`;seg.setAttribute('aria-label',seg.title);trilho.append(seg);});
+      const val=document.createElement('strong');val.className='finance-bar-value';val.textContent=dinheiro.format(m.investimentos);linha.append(label,trilho,val);grupo.append(linha);area.append(grupo);
+    });
+    const tbody=byId('financeiro-invest-categorias');tbody.replaceChildren();const cats=resumo.categorias.filter(c=>c.investimentos>0||c.investimentosPrevistos>0);
+    cats.forEach(c=>{const tr=document.createElement('tr');[c.categoria,dinheiro.format(c.investimentos),dinheiro.format(c.investimentosPrevistos),totais.investimentos?new Intl.NumberFormat('pt-BR',{style:'percent',maximumFractionDigits:1}).format(c.investimentos/totais.investimentos):'—'].forEach((v,i)=>{const td=document.createElement(i?'td':'th');td.textContent=v;tr.append(td);});tbody.append(tr);});
+    if(!cats.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.textContent='Sem categorias de investimento neste ano.';tr.append(td);tbody.append(tr);}
+  }
   async function carregar(){
     if(ocupado){recarregarPendente=true;return;}ocupado=true;
     try{const ano=Number(byId('financeiro-ano').value);const [r,l]=await Promise.all([
       chamar('resumoFinanceiro',ano),chamar('listarLancamentosFinanceiros',{ano,natureza:byId('financeiro-natureza').value,
         status:byId('financeiro-status').value,busca:byId('financeiro-busca').value})]);
-      resumo=r;lancamentos=l;renderResumo();renderLancamentos();aviso('');
+      resumo=r;lancamentos=l;renderResumo();renderAnaliseMensal();renderInvestimentos();renderLancamentos();aviso('');
     }catch(e){aviso(e.message||'Não foi possível carregar o financeiro.','erro');}
     finally{ocupado=false;if(recarregarPendente){recarregarPendente=false;setTimeout(carregar,0);}}
   }
@@ -83,6 +181,7 @@
     byId('fin-total-despesas').textContent=dinheiro.format(t.despesas);byId('fin-total-pagar').textContent='A pagar: '+dinheiro.format(t.aPagar);
     byId('fin-total-investimentos').textContent=dinheiro.format(t.investimentos);byId('fin-total-invest-previstos').textContent='Previstos: '+dinheiro.format(t.investimentosPrevistos);
     byId('fin-saldo').textContent=dinheiro.format(t.saldo);byId('fin-saldo-projetado').textContent='Saldo previsto: '+dinheiro.format(t.saldoProjetado);
+    renderGraficoAnual();
     const body=byId('financeiro-meses');body.replaceChildren();
     resumo.meses.forEach(m=>{const tr=document.createElement('tr');const values=[meses[m.mes-1],dinheiro.format(m.entradas),dinheiro.format(m.despesas),dinheiro.format(m.investimentos),dinheiro.format(m.saldo),dinheiro.format(m.aReceber),dinheiro.format(m.aPagar)];
       values.forEach((v,i)=>{const td=document.createElement(i?'td':'th');td.textContent=v;tr.append(td);});body.append(tr);});
@@ -154,13 +253,18 @@
   byId('novo-lancamento-financeiro').addEventListener('click',novo);
   byId('atualizar-financeiro').addEventListener('click',carregar);
   byId('financeiro-ano').addEventListener('change',carregar);
+  byId('financeiro-mes').addEventListener('change',renderAnaliseMensal);
+  document.querySelectorAll('[data-fin-view]').forEach(btn=>btn.addEventListener('click',()=>{
+    const view=btn.dataset.finView;document.querySelectorAll('[data-fin-view]').forEach(x=>x.setAttribute('aria-selected',String(x===btn)));
+    document.querySelectorAll('[data-fin-panel]').forEach(x=>x.hidden=x.dataset.finPanel!==view);
+  }));
   byId('financeiro-busca').addEventListener('input',()=>{clearTimeout(filtroTimer);filtroTimer=setTimeout(carregar,250);});
   ['financeiro-natureza','financeiro-status'].forEach(id=>byId(id).addEventListener('change',carregar));
   byId('fin-status').addEventListener('change',()=>{if(byId('fin-status').value==='PENDENTE')byId('fin-pagamento').value='';});
   byId('novo-lancamento-financeiro').addEventListener('click',()=>byId('fin-status').dispatchEvent(new Event('change')));
   byId('fechar-form-financeiro').addEventListener('click',()=>byId('form-lancamento-financeiro').close());
   byId('fechar-baixa-financeira').addEventListener('click',()=>byId('form-baixa-financeira').close());
-  preencherAnos();
+  preencherAnos();preencherMeses();
   window.iniciarFinanceiro=carregar;
 })();
 </script>

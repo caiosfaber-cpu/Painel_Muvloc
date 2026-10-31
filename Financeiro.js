@@ -73,7 +73,8 @@ function resumoFinanceiro(anoEntrada) {
   const linhas = lancamentos.getLastRow() < 2 ? [] :
     lancamentos.getRange(2, 1, lancamentos.getLastRow() - 1, CAB_LANCAMENTOS_FINANCEIROS.length).getValues();
   const meses = Array.from({ length: 12 }, (_, i) => ({ mes: i + 1, entradas: 0, despesas: 0,
-    investimentos: 0, aReceber: 0, aPagar: 0, investimentosPrevistos: 0 }));
+    investimentos: 0, aReceber: 0, aPagar: 0, investimentosPrevistos: 0,
+    categorias: new Map(), investimentosPorCategoria: new Map(), formasPagamento: new Map() }));
   const categorias = new Map();
   const chaveMes = iso => {
     const m = /^(\d{4})-(\d{2})-\d{2}$/.exec(iso || '');
@@ -86,15 +87,23 @@ function resumoFinanceiro(anoEntrada) {
     const ix = chaveMes(iso); if (ix < 0) return;
     const valor = Math.round((Number(v[6]) || 0) * 100) / 100, m = meses[ix];
     const nomeCategoria = String(v[5] || 'Sem categoria');
+    if (!m.categorias.has(nomeCategoria)) m.categorias.set(nomeCategoria,
+      { categoria: nomeCategoria, entradas: 0, despesas: 0, investimentos: 0 });
+    const categoriaMes = m.categorias.get(nomeCategoria);
     if (!categorias.has(nomeCategoria)) categorias.set(nomeCategoria, {
       categoria: nomeCategoria, entradas: 0, despesas: 0, investimentos: 0,
       aReceber: 0, aPagar: 0, investimentosPrevistos: 0
     });
     const cat = categorias.get(nomeCategoria);
     if (status === 'BAIXADO') {
-      if (natureza === 'ENTRADA') { m.entradas += valor; cat.entradas += valor; }
-      else if (natureza === 'SAIDA') { m.despesas += valor; cat.despesas += valor; }
-      else if (natureza === 'INVESTIMENTO') { m.investimentos += valor; cat.investimentos += valor; }
+      if (natureza === 'ENTRADA') { m.entradas += valor; cat.entradas += valor; categoriaMes.entradas += valor; }
+      else if (natureza === 'SAIDA') { m.despesas += valor; cat.despesas += valor; categoriaMes.despesas += valor; }
+      else if (natureza === 'INVESTIMENTO') {
+        m.investimentos += valor; cat.investimentos += valor; categoriaMes.investimentos += valor;
+        m.investimentosPorCategoria.set(nomeCategoria, (m.investimentosPorCategoria.get(nomeCategoria) || 0) + valor);
+      }
+      const forma = String(v[11] || 'Não informada');
+      m.formasPagamento.set(forma, (m.formasPagamento.get(forma) || 0) + valor);
     } else if (status === 'PENDENTE') {
       if (natureza === 'ENTRADA') { m.aReceber += valor; cat.aReceber += valor; }
       else if (natureza === 'SAIDA') { m.aPagar += valor; cat.aPagar += valor; }
@@ -106,6 +115,16 @@ function resumoFinanceiro(anoEntrada) {
       m[k] = Math.round(m[k] * 100) / 100;
     m.saldo = Math.round((m.entradas - m.despesas - m.investimentos) * 100) / 100;
     m.saldoProjetado = Math.round((m.saldo + m.aReceber - m.aPagar - m.investimentosPrevistos) * 100) / 100;
+    m.categorias = [...m.categorias.values()].map(c => {
+      for (const k of ['entradas','despesas','investimentos']) c[k] = Math.round(c[k] * 100) / 100;
+      return c;
+    }).sort((a,b) => b.despesas - a.despesas || a.categoria.localeCompare(b.categoria, 'pt-BR'));
+    m.investimentosPorCategoria = [...m.investimentosPorCategoria.entries()]
+      .map(([categoria, valor]) => ({ categoria, valor: Math.round(valor * 100) / 100 }))
+      .sort((a,b) => b.valor - a.valor || a.categoria.localeCompare(b.categoria, 'pt-BR'));
+    m.formasPagamento = [...m.formasPagamento.entries()]
+      .map(([forma, valor]) => ({ forma, valor: Math.round(valor * 100) / 100 }))
+      .sort((a,b) => b.valor - a.valor || a.forma.localeCompare(b.forma, 'pt-BR'));
   });
   const totais = meses.reduce((t, m) => {
     for (const k of ['entradas','despesas','investimentos','aReceber','aPagar','investimentosPrevistos'])
