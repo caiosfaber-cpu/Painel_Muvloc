@@ -274,6 +274,7 @@ function finalizarContrato(id) {
     const agora = new Date();
     contratos.getRange(contrato.linha, 8).setValue('FINALIZADO');
     contratos.getRange(contrato.linha, 12, 1, 2).setValues([[agora, agora]]);
+    registrarContratoNaAuditoriaFinanceira_(id, agora);
     SpreadsheetApp.flush();
     return true;
   } finally { lock.releaseLock(); }

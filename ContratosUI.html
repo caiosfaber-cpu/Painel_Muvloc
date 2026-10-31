@@ -758,7 +758,8 @@ async function finalizarContratoUI(c) {
   if(contratosOcupado||!confirm(`Finalizar ${c.id} e liberar ${c.itens.length} unidade(s) para novas locações?`))return;
   contratosOcupado=true;avisoContratos('Finalizando contrato…');
   try {await chamar('finalizarContrato',c.id);await iniciarContratos();
-    avisoContratos('Contrato finalizado; unidades novamente disponíveis.','sucesso')}
+    window.atualizarIndicadorAuditoria?.();
+    avisoContratos('Contrato finalizado e enviado para auditoria financeira; unidades novamente disponíveis.','sucesso')}
   catch(e){avisoContratos(e.message||'Falha ao finalizar.','erro')}
   finally{contratosOcupado=false}
 }
@@ -828,7 +829,8 @@ $c('confirmar-fechamento-aberto').addEventListener('click',async()=>{
   if(!confirm(`Finalizar ${f.id} por ${moedaContrato.format(f.total)} e liberar os equipamentos?`))return;
   contratosOcupado=true;$c('confirmar-fechamento-aberto').disabled=true;
   try{await chamar('fecharContratoAberto',f.id,{fim:f.fim,horaFim:f.horaFim,totalEsperado:f.total,assinaturaFechamento:f.assinaturaFechamento});
-    $c('fechamento-aberto').close();await iniciarContratos();avisoContratos('Locação fechada, valor final registrado e equipamentos liberados.','sucesso');
+    $c('fechamento-aberto').close();await iniciarContratos();window.atualizarIndicadorAuditoria?.();
+    avisoContratos('Locação fechada, valor enviado para auditoria financeira e equipamentos liberados.','sucesso');
   }catch(e){invalidarFechamentoAberto();$c('aviso-fechamento-aberto').textContent=e.message||'Falha ao fechar.';}
   finally{contratosOcupado=false;}
 });

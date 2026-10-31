@@ -1,0 +1,166 @@
+<section id="painel-financeiro" hidden>
+  <div id="aviso-financeiro" role="status" aria-live="polite"></div>
+  <section class="card" aria-labelledby="titulo-financeiro">
+    <div class="list-head"><div><h2 id="titulo-financeiro">Controle financeiro</h2>
+      <p class="muted">Entradas aprovadas, pagamentos, despesas e investimentos. O saldo considera somente valores recebidos ou pagos.</p></div>
+      <button id="novo-lancamento-financeiro" class="primary" type="button">+ Novo lançamento</button></div>
+    <div class="finance-toolbar"><div><label for="financeiro-ano">Ano do relatório</label><select id="financeiro-ano"></select></div>
+      <button id="atualizar-financeiro" class="secondary" type="button">Atualizar</button></div>
+    <div class="finance-kpis">
+      <article class="finance-kpi"><span>Entradas recebidas</span><strong id="fin-total-entradas">R$ 0,00</strong><small id="fin-total-receber">A receber: R$ 0,00</small></article>
+      <article class="finance-kpi"><span>Despesas pagas</span><strong id="fin-total-despesas">R$ 0,00</strong><small id="fin-total-pagar">A pagar: R$ 0,00</small></article>
+      <article class="finance-kpi"><span>Investimentos pagos</span><strong id="fin-total-investimentos">R$ 0,00</strong><small id="fin-total-invest-previstos">Previstos: R$ 0,00</small></article>
+      <article class="finance-kpi saldo"><span>Saldo de caixa</span><strong id="fin-saldo">R$ 0,00</strong><small id="fin-saldo-projetado">Saldo previsto: R$ 0,00</small></article>
+    </div>
+  </section>
+  <section class="card finance-report" aria-labelledby="titulo-panorama">
+    <h2 id="titulo-panorama">Panorama anual por mês</h2>
+    <div class="finance-table-wrap"><table><thead><tr><th>Mês</th><th>Entradas</th><th>Despesas</th><th>Investimentos</th><th>Saldo de caixa</th><th>A receber</th><th>A pagar</th></tr></thead>
+      <tbody id="financeiro-meses"></tbody></table></div>
+  </section>
+  <details class="card finance-report">
+    <summary style="cursor:pointer;font-weight:700" id="titulo-categorias-financeiras">Resumo anual por categoria</summary>
+    <div class="finance-table-wrap" style="margin-top:12px"><table><thead><tr><th>Categoria</th><th>Entradas</th><th>Despesas</th><th>Investimentos</th><th>A receber</th><th>A pagar</th><th>Participação nas despesas</th></tr></thead>
+      <tbody id="financeiro-categorias"></tbody></table></div>
+  </details>
+  <section class="card" aria-labelledby="titulo-lancamentos">
+    <h2 id="titulo-lancamentos">Lançamentos</h2>
+    <div class="filter-grid">
+      <div><label for="financeiro-busca">Pesquisar</label><input id="financeiro-busca" type="search" placeholder="Descrição, categoria ou contrato"></div>
+      <div><label for="financeiro-natureza">Natureza</label><select id="financeiro-natureza"><option value="TODAS">Todas</option><option value="ENTRADA">Entradas</option><option value="SAIDA">Despesas</option><option value="INVESTIMENTO">Investimentos</option></select></div>
+      <div><label for="financeiro-status">Situação</label><select id="financeiro-status"><option value="TODOS">Todas</option><option value="PENDENTE">Pendentes</option><option value="BAIXADO">Recebidos ou pagos</option></select></div>
+    </div>
+    <div id="lista-lancamentos-financeiros" class="finance-list"><p class="vazio">Carregando lançamentos…</p></div>
+  </section>
+  <dialog id="form-lancamento-financeiro" class="lateral-form" aria-labelledby="titulo-form-lancamento">
+    <div class="list-head"><h2 id="titulo-form-lancamento">Novo lançamento</h2><button id="fechar-form-financeiro" class="secondary" type="button">Fechar</button></div>
+    <form id="dados-lancamento-financeiro">
+      <input id="fin-id" type="hidden">
+      <label for="fin-descricao">Descrição</label><input id="fin-descricao" maxlength="180" required>
+      <div class="field-row"><div><label for="fin-natureza">Natureza</label><select id="fin-natureza"><option value="ENTRADA">Entrada</option><option value="SAIDA">Despesa</option><option value="INVESTIMENTO">Investimento</option></select></div>
+        <div><label for="fin-categoria">Categoria</label><input id="fin-categoria" maxlength="80" required placeholder="Ex.: manutenção"></div></div>
+      <label for="fin-valor">Valor (R$)</label><input id="fin-valor" type="number" min="0" step="0.01" required>
+      <div class="field-row"><div><label for="fin-competencia">Data de competência</label><input id="fin-competencia" type="date" required></div>
+        <div><label for="fin-vencimento">Data prevista para pagamento/recebimento</label><input id="fin-vencimento" type="date" required></div></div>
+      <div class="field-row"><div><label for="fin-status">Situação</label><select id="fin-status"><option value="PENDENTE">Pendente</option><option value="BAIXADO">Recebido ou pago</option></select></div>
+        <div><label for="fin-pagamento">Data do pagamento/recebimento</label><input id="fin-pagamento" type="date"></div></div>
+      <label for="fin-forma">Forma de pagamento</label><select id="fin-forma"><option value="">Não informada</option><option>PIX</option><option>Dinheiro</option><option>Débito</option><option>Crédito</option><option>Boleto</option><option>Transferência</option><option>Outro</option></select>
+      <label for="fin-observacoes">Observações</label><textarea id="fin-observacoes" maxlength="1000"></textarea>
+      <div class="actions"><button class="primary" type="submit" id="salvar-lancamento-financeiro">Salvar lançamento</button></div>
+    </form>
+  </dialog>
+  <dialog id="form-baixa-financeira" class="lateral-form" aria-labelledby="titulo-baixa-financeira">
+    <div class="list-head"><h2 id="titulo-baixa-financeira">Registrar recebimento ou pagamento</h2><button id="fechar-baixa-financeira" class="secondary" type="button">Fechar</button></div>
+    <p id="referencia-baixa-financeira" class="muted"></p><input id="baixa-fin-id" type="hidden">
+    <label for="baixa-fin-data">Data do recebimento ou pagamento</label><input id="baixa-fin-data" type="date" required>
+    <div class="actions"><button id="confirmar-baixa-financeira" class="primary" type="button">Confirmar data</button></div>
+    <p id="aviso-baixa-financeira" role="status" aria-live="polite"></p>
+  </dialog>
+</section>
+<script>
+(function(){
+  const byId=id=>document.getElementById(id);
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const dinheiro=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+  let resumo=null,lancamentos=[],ocupado=false,recarregarPendente=false,filtroTimer=null;
+  function aviso(msg,tipo=''){byId('aviso-financeiro').textContent=msg;byId('aviso-financeiro').className=tipo;}
+  function hoje(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function br(iso){if(!iso)return '—';const [a,m,d]=iso.split('-');return d+'/'+m+'/'+a;}
+  function preencherAnos(){const select=byId('financeiro-ano');if(select.options.length)return;
+    const atual=new Date().getFullYear();for(let ano=atual-3;ano<=atual+2;ano++){const o=document.createElement('option');o.value=ano;o.textContent=String(ano);select.append(o);}select.value=String(atual);}
+  async function carregar(){
+    if(ocupado){recarregarPendente=true;return;}ocupado=true;
+    try{const ano=Number(byId('financeiro-ano').value);const [r,l]=await Promise.all([
+      chamar('resumoFinanceiro',ano),chamar('listarLancamentosFinanceiros',{ano,natureza:byId('financeiro-natureza').value,
+        status:byId('financeiro-status').value,busca:byId('financeiro-busca').value})]);
+      resumo=r;lancamentos=l;renderResumo();renderLancamentos();aviso('');
+    }catch(e){aviso(e.message||'Não foi possível carregar o financeiro.','erro');}
+    finally{ocupado=false;if(recarregarPendente){recarregarPendente=false;setTimeout(carregar,0);}}
+  }
+  function renderResumo(){
+    const t=resumo.totais;
+    byId('fin-total-entradas').textContent=dinheiro.format(t.entradas);byId('fin-total-receber').textContent='A receber: '+dinheiro.format(t.aReceber);
+    byId('fin-total-despesas').textContent=dinheiro.format(t.despesas);byId('fin-total-pagar').textContent='A pagar: '+dinheiro.format(t.aPagar);
+    byId('fin-total-investimentos').textContent=dinheiro.format(t.investimentos);byId('fin-total-invest-previstos').textContent='Previstos: '+dinheiro.format(t.investimentosPrevistos);
+    byId('fin-saldo').textContent=dinheiro.format(t.saldo);byId('fin-saldo-projetado').textContent='Saldo previsto: '+dinheiro.format(t.saldoProjetado);
+    const body=byId('financeiro-meses');body.replaceChildren();
+    resumo.meses.forEach(m=>{const tr=document.createElement('tr');const values=[meses[m.mes-1],dinheiro.format(m.entradas),dinheiro.format(m.despesas),dinheiro.format(m.investimentos),dinheiro.format(m.saldo),dinheiro.format(m.aReceber),dinheiro.format(m.aPagar)];
+      values.forEach((v,i)=>{const td=document.createElement(i?'td':'th');td.textContent=v;tr.append(td);});body.append(tr);});
+    const tr=document.createElement('tr');tr.className='finance-total-row';
+    ['Total do ano',dinheiro.format(t.entradas),dinheiro.format(t.despesas),dinheiro.format(t.investimentos),dinheiro.format(t.saldo),dinheiro.format(t.aReceber),dinheiro.format(t.aPagar)]
+      .forEach((v,i)=>{const td=document.createElement(i?'td':'th');td.textContent=v;tr.append(td);});body.append(tr);
+    const categorias=byId('financeiro-categorias');categorias.replaceChildren();
+    const percentual=new Intl.NumberFormat('pt-BR',{style:'percent',maximumFractionDigits:1});
+    (resumo.categorias||[]).forEach(c=>{const linha=document.createElement('tr');
+      [c.categoria,dinheiro.format(c.entradas),dinheiro.format(c.despesas),dinheiro.format(c.investimentos),
+        dinheiro.format(c.aReceber),dinheiro.format(c.aPagar),c.participacaoDespesas==null?'—':percentual.format(c.participacaoDespesas)]
+        .forEach((v,i)=>{const td=document.createElement(i?'td':'th');td.textContent=v;linha.append(td);});categorias.append(linha);});
+    if(!categorias.children.length){const trVazio=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='Sem lançamentos por categoria neste ano.';trVazio.append(td);categorias.append(trVazio);}
+  }
+  function renderLancamentos(){
+    const area=byId('lista-lancamentos-financeiros');area.replaceChildren();
+    if(!lancamentos.length){const p=document.createElement('p');p.className='vazio';p.textContent='Nenhum lançamento encontrado para os filtros atuais.';area.append(p);return;}
+    lancamentos.forEach(x=>{const card=document.createElement('article');card.className='finance-row';
+      const top=document.createElement('div');top.className='finance-row-head';
+      const title=document.createElement('strong');title.textContent=x.descricao;
+      const status=document.createElement('span');status.className='finance-status '+(x.status==='PENDENTE'?'pendente':'confirmado');status.textContent=x.status==='PENDENTE'?'Pendente':(x.natureza==='ENTRADA'?'Recebido':'Pago');
+      top.append(title,status);card.append(top);
+      const line=document.createElement('p');line.textContent=x.natureza+' · '+x.categoria+' · '+dinheiro.format(x.valor)+' · competência '+br(x.competencia);card.append(line);
+      const dates=document.createElement('p');dates.textContent=(x.status==='BAIXADO'?'Baixa em '+br(x.pagamento):'Previsto para '+br(x.vencimento))+' · '+(x.forma||'forma não informada')+' · '+x.origem;card.append(dates);
+      if(x.observacoes){const note=document.createElement('p');note.textContent=x.observacoes;card.append(note);}
+      const actions=document.createElement('div');actions.className='actions';
+      if(x.origem==='MANUAL'){const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar lançamento';edit.addEventListener('click',()=>editar(x));actions.append(edit);}
+      if(x.status==='PENDENTE'){const baixa=document.createElement('button');baixa.className='primary';baixa.textContent=x.natureza==='ENTRADA'?'Registrar recebimento':'Registrar pagamento';baixa.addEventListener('click',()=>abrirBaixa(x));actions.append(baixa);}
+      card.append(actions);area.append(card);
+    });
+  }
+  function editar(x){
+    byId('titulo-form-lancamento').textContent='Editar lançamento';
+    byId('fin-id').value=x.id;byId('fin-descricao').value=x.descricao;byId('fin-natureza').value=x.natureza;
+    byId('fin-categoria').value=x.categoria;byId('fin-valor').value=Number(x.valor).toFixed(2);
+    byId('fin-competencia').value=x.competencia;byId('fin-vencimento').value=x.vencimento;
+    byId('fin-status').value=x.status;byId('fin-pagamento').value=x.pagamento||'';
+    byId('fin-forma').value=x.forma||'';byId('fin-observacoes').value=x.observacoes||'';
+    byId('form-lancamento-financeiro').showModal();
+  }
+  function novo(){
+    byId('dados-lancamento-financeiro').reset();byId('fin-id').value='';
+    byId('titulo-form-lancamento').textContent='Novo lançamento';byId('fin-status').value='PENDENTE';byId('fin-natureza').value='ENTRADA';
+    byId('fin-competencia').value=hoje();byId('fin-vencimento').value=hoje();byId('fin-pagamento').value='';
+    byId('form-lancamento-financeiro').showModal();
+  }
+  function abrirBaixa(x){
+    byId('baixa-fin-id').value=x.id;byId('referencia-baixa-financeira').textContent=x.descricao+' · '+dinheiro.format(x.valor);
+    byId('baixa-fin-data').value=hoje();byId('aviso-baixa-financeira').textContent='';byId('form-baixa-financeira').showModal();
+  }
+  byId('dados-lancamento-financeiro').addEventListener('submit',async ev=>{
+    ev.preventDefault();if(ocupado||!ev.currentTarget.reportValidity())return;ocupado=true;
+    byId('salvar-lancamento-financeiro').disabled=true;
+    const dados={id:byId('fin-id').value||undefined,descricao:byId('fin-descricao').value,natureza:byId('fin-natureza').value,
+      categoria:byId('fin-categoria').value,valor:byId('fin-valor').value,competencia:byId('fin-competencia').value,
+      vencimento:byId('fin-vencimento').value,pagamento:byId('fin-pagamento').value,status:byId('fin-status').value,
+      forma:byId('fin-forma').value,observacoes:byId('fin-observacoes').value};
+    try{await chamar('salvarLancamentoFinanceiro',dados);byId('form-lancamento-financeiro').close();aviso('Lançamento salvo.','sucesso');}
+    catch(e){aviso(e.message||'Não foi possível salvar o lançamento.','erro');}
+    finally{ocupado=false;byId('salvar-lancamento-financeiro').disabled=false;await carregar();}
+  });
+  byId('confirmar-baixa-financeira').addEventListener('click',async()=>{
+    if(ocupado||!byId('baixa-fin-data').reportValidity())return;ocupado=true;byId('confirmar-baixa-financeira').disabled=true;
+    try{await chamar('registrarPagamentoFinanceiro',byId('baixa-fin-id').value,{status:'BAIXADO',pagamento:byId('baixa-fin-data').value});
+      byId('form-baixa-financeira').close();aviso('Pagamento registrado e saldo atualizado.','sucesso');}
+    catch(e){byId('aviso-baixa-financeira').textContent=e.message||'Falha ao registrar pagamento.';}
+    finally{ocupado=false;byId('confirmar-baixa-financeira').disabled=false;await carregar();}
+  });
+  byId('novo-lancamento-financeiro').addEventListener('click',novo);
+  byId('atualizar-financeiro').addEventListener('click',carregar);
+  byId('financeiro-ano').addEventListener('change',carregar);
+  byId('financeiro-busca').addEventListener('input',()=>{clearTimeout(filtroTimer);filtroTimer=setTimeout(carregar,250);});
+  ['financeiro-natureza','financeiro-status'].forEach(id=>byId(id).addEventListener('change',carregar));
+  byId('fin-status').addEventListener('change',()=>{if(byId('fin-status').value==='PENDENTE')byId('fin-pagamento').value='';});
+  byId('novo-lancamento-financeiro').addEventListener('click',()=>byId('fin-status').dispatchEvent(new Event('change')));
+  byId('fechar-form-financeiro').addEventListener('click',()=>byId('form-lancamento-financeiro').close());
+  byId('fechar-baixa-financeira').addEventListener('click',()=>byId('form-baixa-financeira').close());
+  preencherAnos();
+  window.iniciarFinanceiro=carregar;
+})();
+</script>

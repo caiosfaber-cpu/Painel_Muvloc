@@ -1,5 +1,5 @@
-/** Painel_Muvloc v18 — cadastro de clientes vinculado a uma Planilha Google. */
-const MUVLOC_VERSAO = 'v18';
+/** Painel_Muvloc v19 — cadastro, locações e controle financeiro. */
+const MUVLOC_VERSAO = 'v19';
 const MUVLOC_ABA_ENDERECOS = 'EnderecosLocacao';
 const MUVLOC_CAB_ENDERECOS = ['ID', 'ID do cliente', 'Endereço de locação', 'Criado em'];
 const MUVLOC_ABA_CLIENTES = 'Clientes';
@@ -35,8 +35,10 @@ function configurar() {
   configurarOrcamentos_(planilha);
   configurarRenegociacoes_(planilha);
   configurarContratoPDF_(planilha);
+  configurarFinanceiro_(planilha);
   PropertiesService.getScriptProperties().setProperty(PROP_PLANILHA, planilha.getId());
-  return 'Cadastros, contratos e orçamentos configurados.';
+  sincronizarContratosFinalizadosFinanceiro_();
+  return 'Cadastros, contratos, auditoria financeira e lançamentos configurados.';
 }
 
 function listarClientes() {

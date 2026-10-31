@@ -1,0 +1,115 @@
+<section id="painel-auditoria" hidden>
+  <div id="aviso-auditoria" role="status" aria-live="polite"></div>
+  <section class="card" aria-labelledby="titulo-auditoria">
+    <div class="list-head"><h2 id="titulo-auditoria">Auditoria financeira de contratos</h2>
+      <button id="atualizar-auditoria" class="secondary" type="button">Atualizar fila</button></div>
+    <p class="muted">Todo contrato finalizado aguarda conferência. O valor padrão já considera desconto e frete do contrato; a taxa condicional de limpeza fica fora. Revise valor e datas antes de confirmar. A confirmação cria um recebível; ele só entra no saldo de caixa quando for marcado como recebido.</p>
+    <div class="finance-kpis">
+      <article class="finance-kpi"><span>Pendentes de conferência</span><strong id="auditoria-pendentes">0</strong></article>
+      <article class="finance-kpi"><span>Valores confirmados</span><strong id="auditoria-confirmadas">0</strong></article>
+    </div>
+    <div class="filter-grid">
+      <div><label for="auditoria-busca">Contrato ou cliente</label><input id="auditoria-busca" type="search" placeholder="Digite para pesquisar"></div>
+      <div><label for="auditoria-filtro">Situação</label><select id="auditoria-filtro"><option value="PENDENTE">Pendentes</option><option value="CONFIRMADO">Confirmados</option><option value="TODAS">Todas</option></select></div>
+    </div>
+    <div id="lista-auditoria" class="finance-list"><p class="vazio">Carregando auditorias…</p></div>
+  </section>
+  <dialog id="form-auditoria" class="lateral-form" aria-labelledby="titulo-form-auditoria">
+    <div class="list-head"><h2 id="titulo-form-auditoria">Revisar valores do contrato</h2><button id="fechar-auditoria" class="secondary" type="button">Fechar</button></div>
+    <p id="referencia-auditoria" class="muted"></p>
+    <form id="dados-auditoria">
+      <input id="auditoria-id" type="hidden">
+      <input id="auditoria-revisao" type="hidden">
+      <label for="auditoria-valor">Valor que será lançado como receita</label>
+      <input id="auditoria-valor" type="number" min="0" step="0.01" required>
+      <div class="field-row"><div><label for="auditoria-competencia">Data de competência</label><input id="auditoria-competencia" type="date" required></div>
+        <div><label for="auditoria-vencimento">Data prevista de recebimento</label><input id="auditoria-vencimento" type="date" required></div></div>
+      <div class="field-row"><div><label for="auditoria-recebimento">Data já recebido (opcional)</label><input id="auditoria-recebimento" type="date"></div>
+        <div><label for="auditoria-forma">Forma de pagamento</label><select id="auditoria-forma"><option value="">Não informada</option><option>PIX</option><option>Dinheiro</option><option>Débito</option><option>Crédito</option><option>Boleto</option><option>Transferência</option><option>Outro</option></select></div></div>
+      <label for="auditoria-observacoes">Observações da conferência</label>
+      <textarea id="auditoria-observacoes" maxlength="1000"></textarea>
+      <p id="aviso-form-auditoria" role="status" aria-live="polite"></p>
+      <div class="actions"><button id="salvar-auditoria" class="secondary" type="button">Salvar revisão</button>
+        <button id="confirmar-auditoria" class="primary" type="button">Confirmar e enviar ao financeiro</button></div>
+    </form>
+  </dialog>
+</section>
+<script>
+(function(){
+  const byId=id=>document.getElementById(id);
+  let registros=[],ocupado=false;
+  const dinheiro=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+  function aviso(msg,tipo=''){byId('aviso-auditoria').textContent=msg;byId('aviso-auditoria').className=tipo;}
+  function dataBr(iso){if(!iso)return 'Não informada';const [a,m,d]=iso.split('-');return d+'/'+m+'/'+a;}
+  function atualizarContador(lista){const pendentes=lista.filter(x=>x.status==='PENDENTE').length;
+    byId('contador-auditoria').textContent=String(pendentes);
+    byId('auditoria-pendentes').textContent=String(pendentes);
+    byId('auditoria-confirmadas').textContent=String(lista.filter(x=>x.status==='CONFIRMADO').length);}
+  async function carregar(){
+    if(ocupado)return;
+    try{registros=await chamar('listarAuditoriasFinanceiras','TODAS');atualizarContador(registros);render();}
+    catch(e){aviso(e.message||'Não foi possível carregar a auditoria.','erro');}
+  }
+  function render(){
+    const area=byId('lista-auditoria');area.replaceChildren();
+    const filtro=byId('auditoria-filtro').value,termo=byId('auditoria-busca').value.trim().toLocaleLowerCase('pt-BR');
+    const itens=registros.filter(x=>(filtro==='TODAS'||x.status===filtro)&&
+      (!termo||[x.contratoId,x.cliente].some(v=>String(v).toLocaleLowerCase('pt-BR').includes(termo))));
+    if(!itens.length){const p=document.createElement('p');p.className='vazio';p.textContent='Nenhum contrato nesta situação.';area.append(p);return;}
+    itens.forEach(x=>{
+      const card=document.createElement('article');card.className='finance-row';
+      const header=document.createElement('div');header.className='finance-row-head';
+      const title=document.createElement('strong');title.textContent=x.contratoId+' · '+x.cliente;
+      const badge=document.createElement('span');badge.className='finance-status '+(x.status==='PENDENTE'?'pendente':'confirmado');badge.textContent=x.status==='PENDENTE'?'Aguardando conferência':'Confirmado';
+      header.append(title,badge);card.append(header);
+      const info=document.createElement('p');info.textContent='Valor do contrato '+dinheiro.format(x.valorContrato)+' · encerrado em '+dataBr(x.encerramento);card.append(info);
+      const resumo=document.createElement('p');resumo.textContent='Valor financeiro '+dinheiro.format(x.valorConfirmado)+' · competência '+dataBr(x.competencia)+' · vencimento '+dataBr(x.vencimento);card.append(resumo);
+      if(x.status==='CONFIRMADO'){const feito=document.createElement('p');feito.textContent='Lançamento '+x.lancamentoId+(x.recebimento?' · recebido em '+dataBr(x.recebimento):' · aguardando recebimento')+(x.confirmadoEm?' · conferido em '+x.confirmadoEm:'')+(x.confirmadoPor?' por '+x.confirmadoPor:'');card.append(feito);}
+      const acoes=document.createElement('div');acoes.className='actions';
+      if(x.status==='PENDENTE'){const btn=document.createElement('button');btn.className='primary';btn.textContent='Revisar e confirmar';btn.addEventListener('click',()=>abrir(x));acoes.append(btn);}
+      else{const btn=document.createElement('button');btn.className='secondary';btn.textContent='Abrir financeiro';btn.addEventListener('click',()=>{document.getElementById('aba-financeiro').click();});acoes.append(btn);}
+      card.append(acoes);area.append(card);
+    });
+  }
+  function abrir(x){
+    byId('referencia-auditoria').textContent='Contrato '+x.contratoId+' · '+x.cliente+' · valor original '+dinheiro.format(x.valorContrato);
+    byId('auditoria-id').value=x.id;byId('auditoria-revisao').value=String(x.revisao);
+    byId('auditoria-valor').value=Number(x.valorConfirmado).toFixed(2);
+    byId('auditoria-competencia').value=x.competencia||x.encerramento;
+    byId('auditoria-vencimento').value=x.vencimento||x.encerramento;
+    byId('auditoria-recebimento').value=x.recebimento||'';
+    byId('auditoria-forma').value=x.forma||'';
+    byId('auditoria-observacoes').value=x.observacoes||'';
+    byId('aviso-form-auditoria').textContent='';
+    byId('form-auditoria').showModal();
+  }
+  function dados(){
+    return {valorConfirmado:byId('auditoria-valor').value,competencia:byId('auditoria-competencia').value,
+      vencimento:byId('auditoria-vencimento').value,recebimento:byId('auditoria-recebimento').value,
+      forma:byId('auditoria-forma').value,observacoes:byId('auditoria-observacoes').value,
+      revisao:Number(byId('auditoria-revisao').value)};
+  }
+  async function executar(confirmar){
+    if(ocupado)return;
+    const id=byId('auditoria-id').value;
+    if(!id||!byId('dados-auditoria').reportValidity())return;
+    ocupado=true;byId('salvar-auditoria').disabled=true;byId('confirmar-auditoria').disabled=true;
+    byId('aviso-form-auditoria').textContent=confirmar?'Confirmando e criando o recebível…':'Salvando revisão…';
+    try{
+      const resultado=confirmar?await chamar('confirmarAuditoriaFinanceira',id,dados()):await chamar('salvarAuditoriaFinanceira',id,dados());
+      if(confirmar){byId('form-auditoria').close();aviso('Contrato confirmado. O recebível foi incluído no financeiro.','sucesso');}
+      else{aviso('Revisão salva. O contrato continua pendente de confirmação.','sucesso');}
+      await carregar();
+    }catch(e){byId('aviso-form-auditoria').textContent=e.message||'Falha ao processar auditoria.';}
+    finally{ocupado=false;byId('salvar-auditoria').disabled=false;byId('confirmar-auditoria').disabled=false;}
+  }
+  byId('atualizar-auditoria').addEventListener('click',carregar);
+  byId('auditoria-filtro').addEventListener('change',render);
+  byId('auditoria-busca').addEventListener('input',render);
+  byId('fechar-auditoria').addEventListener('click',()=>byId('form-auditoria').close());
+  byId('salvar-auditoria').addEventListener('click',()=>executar(false));
+  byId('confirmar-auditoria').addEventListener('click',()=>executar(true));
+  window.atualizarIndicadorAuditoria=carregar;
+  window.iniciarAuditoriaFinanceira=carregar;
+})();
+</script>

@@ -110,7 +110,8 @@ function fecharContratoAberto(id,dados) {
     abas.contratos.getRange(c.linha,19).setValue(fechamento.horaFim);
     const agora=new Date();abas.contratos.getRange(c.linha,12,1,2).setValues([[agora,agora]]);
     // Só libera o estoque depois de gravar o fechamento financeiro.
-    abas.contratos.getRange(c.linha,8).setValue('FINALIZADO');SpreadsheetApp.flush();
+    abas.contratos.getRange(c.linha,8).setValue('FINALIZADO');
+    registrarContratoNaAuditoriaFinanceira_(id,agora);SpreadsheetApp.flush();
     return {id:c.id,total:fechamento.total,fim:fechamento.fim,horaFim:fechamento.horaFim};
   } finally {lock.releaseLock();}
 }
