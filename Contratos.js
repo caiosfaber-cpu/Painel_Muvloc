@@ -3,7 +3,7 @@ const ABA_CONTRATOS = 'Contratos';
 const ABA_ITENS = 'ItensContrato';
 const CAB_CONTRATOS = ['ID', 'ID cliente', 'Cliente', 'CPF/CNPJ', 'Telefone', 'Endereço',
   'Início', 'Status', 'Valor total', 'Último dia', 'Criado em', 'Atualizado em', 'Finalizado em',
-  'Subtotal bruto', 'Tipo desconto', 'Valor informado', 'Desconto aplicado', 'Endereço de locação', 'Horário de encerramento', 'Modalidade', 'Horário de início', 'Fuso horário'];
+  'Subtotal bruto', 'Tipo desconto', 'Valor informado', 'Desconto aplicado', 'Endereço de locação', 'Horário de encerramento', 'Modalidade', 'Horário de início', 'Fuso horário', 'Frete'];
 const CAB_ITENS = ['ID', 'ID contrato', 'Código unidade', 'ID categoria', 'Categoria',
   'Períodos JSON', 'Total de diárias', 'Último dia', 'Subtotal', 'Quantidade', 'Taxa de limpeza (%)', 'Tarifas de prazo aberto JSON'];
 const DIAS_FAIXAS = { diaria1: 1, diaria2: 2, diaria3: 3, diaria4: 4, diaria5: 5,
@@ -23,10 +23,12 @@ function configurarContratos_(planilha) {
   }
   ampliarCabecalho_(planilha, ABA_CONTRATOS, CAB_CONTRATOS, 17);
   ampliarCabecalho_(planilha, ABA_CONTRATOS, CAB_CONTRATOS, 19);
+  ampliarCabecalho_(planilha, ABA_CONTRATOS, CAB_CONTRATOS, 22);
   const aba = prepararAba_(planilha, ABA_CONTRATOS, CAB_CONTRATOS, ['A:H', 'J:J', 'R:S'], 'I:I');
   corrigirColunaHoraLocacao_(aba, 19);
   aba.getRange('T:V').setNumberFormat('@');
   aba.getRange('N:N').setNumberFormat('"R$" #,##0.00');
+  aba.getRange('W:W').setNumberFormat('"R$" #,##0.00');
   aba.getRange('Q:Q').setNumberFormat('"R$" #,##0.00');
   if (aba.getLastRow() > 1) {
     const antigos = aba.getRange(2, 9, aba.getLastRow() - 1, 1).getValues();
@@ -64,7 +66,7 @@ function lerContratos_(aba) {
       desconto: { tipo: String(v[14] || 'nenhum'), valor: Number(v[15]) || 0,
         aplicado: Number(v[16]) || 0 }, enderecoLocacao: String(v[17] || v[5]),
       horaFim: lerHoraLocacao_(v[18], exibidos[i][18]), modalidade: String(v[19] || 'FIXO'),
-      horaInicio: String(v[20] || ''), fuso: String(v[21] || Session.getScriptTimeZone()) }))
+      horaInicio: String(v[20] || ''), fuso: String(v[21] || Session.getScriptTimeZone()), frete: validarFrete_(v[22]) }))
     .filter(c => c.id);
 }
 
@@ -99,7 +101,7 @@ function listarContratos() {
   return lerContratos_(contratos).map(c => ({ id: c.id, cliente: c.cliente,
     documento: c.documento, telefone: c.telefone, endereco: c.endereco,
     modalidade: c.modalidade, horaInicio: c.horaInicio, fuso: c.fuso, inicio: c.inicio, enderecoLocacao: c.enderecoLocacao, horaFim: c.horaFim, status: c.status, subtotal: c.subtotal,
-    desconto: c.desconto, total: c.total, fim: c.fim,
+    desconto: c.desconto, frete: c.frete, total: c.total, fim: c.fim,
     finalizadoEm: c.finalizado ? Utilities.formatDate(c.finalizado, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm') : '',
     itens: linhas.filter(i => i.contratoId === c.id).map(i => ({ id: i.id, inicio: i.blocos[0]?.inicioLocacao || c.inicio, horaInicio: i.blocos[0]?.horaInicioLocacao || c.horaInicio, codigo: i.codigo,
       categoriaId: i.categoriaId, categoria: i.categoria, blocos: i.blocos,
@@ -171,9 +173,10 @@ function calcularOrcamento_(dados, tabelasSalvas) {
   });
   const subtotal = somarValores_(itens.map(i => i.subtotal));
   const desconto = aberto ? descontoPrazoAberto_(subtotal, dados.desconto) : calcularDesconto_(subtotal, dados.desconto);
+  const frete = validarFrete_(dados.frete);
   return { clienteId, cliente: clienteExibido.nome, documento: clienteExibido.documento,
     telefone: clienteExibido.telefone, endereco: clienteExibido.endereco,
-    inicio, modalidade, horaInicio, fuso, tarifasAssinatura: aberto ? assinaturaTarifasAbertas_(itens) : '', enderecoLocacao, horaFim, itens, subtotal, desconto, total: desconto.total,
+    inicio, modalidade, horaInicio, fuso, tarifasAssinatura: aberto ? assinaturaTarifasAbertas_(itens) : '', enderecoLocacao, horaFim, itens, subtotal, desconto, frete, total: somarValores_([desconto.total, frete]),
     fim: itens.map(i => i.fim).sort().at(-1) };
 }
 
@@ -200,7 +203,7 @@ function confirmarContrato_(dados, tabelasSalvas) {
       proteger_(cotacao.telefone), proteger_(cotacao.endereco), cotacao.inicio,
       'ATIVO', cotacao.total, cotacao.fim, agora, agora, '', cotacao.subtotal,
       cotacao.desconto.tipo, cotacao.desconto.valor, cotacao.desconto.aplicado,
-      proteger_(cotacao.enderecoLocacao), cotacao.horaFim, cotacao.modalidade, cotacao.horaInicio, cotacao.fuso
+      proteger_(cotacao.enderecoLocacao), cotacao.horaFim, cotacao.modalidade, cotacao.horaInicio, cotacao.fuso, cotacao.frete
     ]]);
     const linhas = cotacao.itens.map(i => [Utilities.getUuid(), id, i.codigo, i.categoriaId,
       proteger_(i.categoria), JSON.stringify(i.blocos), i.diarias, i.fim, i.subtotal, i.quantidade, i.taxaLimpeza, i.tarifas ? JSON.stringify(i.tarifas) : '']);
@@ -245,7 +248,7 @@ function prorrogarContratoLegado_(id, acrescimos, totalEsperado) {
     const todos = itens.map(i => alterados.find(a => a.id === i.id) || i);
     const subtotal = somarValores_(todos.map(i => i.subtotal));
     const desconto = calcularDesconto_(subtotal, contrato.desconto);
-    const total = desconto.total;
+    const total = somarValores_([desconto.total, validarFrete_(contrato.frete)]);
     if (typeof totalEsperado !== 'number' || total !== totalEsperado)
       throw new Error('O preço mudou. Atualize os dados e confira a prorrogação antes de confirmar.');
     const fim = todos.map(i => i.fim).sort().at(-1);
@@ -340,4 +343,18 @@ function corrigirColunaHoraLocacao_(aba, coluna) {
     });
   }
   aba.getRange(1, coluna, aba.getMaxRows(), 1).setNumberFormat('@');
+}
+
+/** Frete é um valor por orçamento; descontos e limpeza incidem só nas diárias. */
+function validarFrete_(entrada) {
+  if (entrada == null || entrada === '') return 0;
+  if (typeof entrada !== 'number' && typeof entrada !== 'string')
+    throw new Error('Informe um frete válido, não negativo, com até duas casas decimais.');
+  const texto=String(entrada).trim();
+  if(typeof entrada==='string' && !/^\d+(?:[.,]\d{1,2})?$/.test(texto))
+    throw new Error('Informe um frete válido, não negativo, com até duas casas decimais.');
+  const valor=Number(texto.replace(',','.'));
+  if(!Number.isFinite(valor) || valor<0 || Math.round(valor*100)/100!==valor || !Number.isSafeInteger(Math.round(valor*100)))
+    throw new Error('Informe um frete válido, não negativo, com até duas casas decimais.');
+  return valor;
 }

@@ -259,7 +259,7 @@ function gerarPDFContrato(id) {
     tabelaContratoPDF_(corpo, [
       ['Equipamento / código', emAberto?'Períodos de referência':'Períodos contratados', 'Diárias', 'Último dia', 'Subtotal'],
       ...equipamentos.map(item => [
-        item.categoria + '\n' + (item.codigo.startsWith('QTD-') ? item.quantidade + ' peças' : item.codigo),
+        item.categoria + '\n' + (item.codigo.startsWith('QTD-') ? item.quantidade + ' peças' : item.codigo) + (item.blocos[0]?.inicioLocacao?'\nInício: '+dataContratoPDF_(item.blocos[0].inicioLocacao)+(item.blocos[0].horaInicioLocacao?' às '+item.blocos[0].horaInicioLocacao:''):''),
         item.blocos.map(b => (b.vezes>1?b.vezes+' × ':'') + periodoContratoPDF_(b.faixa) + ' (' +
           moedaContratoPDF_(b.preco) + (item.codigo.startsWith('QTD-') ? ' por peça' : '') + ')').join(' + '),
         emAberto ? 'A apurar' : String(item.diarias) + (aberto?' utilizadas / '+item.blocos.reduce((n,b)=>n+b.diarias*(b.vezes||1),0)+' cobertas':''), emAberto ? 'Em aberto' : (dataContratoPDF_(item.fim) + (contrato.horaFim ? ' às ' + contrato.horaFim : '')), (emAberto?'Referência: ':'')+moedaContratoPDF_(item.subtotal)
@@ -270,7 +270,8 @@ function gerarPDFContrato(id) {
       ['Primeiro dia da locação', dataContratoPDF_(contrato.inicio)+(aberto?' às '+contrato.horaInicio+' ('+contrato.fuso+')':'')],
       [aberto?'Devolução / encerramento':'Último dia previsto do contrato', emAberto ? 'Sem término definido' : (dataContratoPDF_(contrato.fim) + (contrato.horaFim ? ' às ' + contrato.horaFim : ''))],
       [emAberto?'Subtotal de referência (1 diária)':'Subtotal', moedaContratoPDF_(contrato.subtotal)],
-      ['Desconto', descontoContratoPDF_(contrato.desconto)],
+      ['Desconto sobre as diárias', descontoContratoPDF_(contrato.desconto)],
+      ['Frete', moedaContratoPDF_(validarFrete_(contrato.frete))],
       [emAberto?'REFERÊNCIA — VALOR FINAL A APURAR':'VALOR TOTAL DA LOCAÇÃO', moedaContratoPDF_(contrato.total)]
     ], false);
 
@@ -291,6 +292,7 @@ function gerarPDFContrato(id) {
         if(texto.startsWith('10.1.'))texto='10.1. A modalidade em aberto não gera multa por ultrapassar uma data final inexistente. Havendo prazo de devolução posteriormente acordado e documentado entre as partes, atraso de responsabilidade do LOCATÁRIO poderá sujeitar-se à diária correspondente acrescida de multa de '+config.multaPercentual+'% da respectiva diária por dia de atraso. Essas cobranças são apuradas à parte, sem lançamento automático pelo fechamento.';
         if(texto.startsWith('11.1.'))texto='11.1. O pagamento da locação em aberto é devido conforme o fechamento, salvo condição expressamente acordada e registrada neste instrumento.';
       }
+      if(texto.startsWith('5.1.'))texto+=' O frete discriminado no quadro integra o total; descontos e taxa de limpeza têm como base somente as diárias.';
       if (!aberto && texto.startsWith('2.1.')) texto += contrato.horaFim ? ' O horário de encerramento é ' + contrato.horaFim + ', na data final de cada equipamento.' : '';
       if (texto.startsWith('2.2.')) texto = texto.replace('3 (três) horas', config.antecedenciaHoras + ' hora(s)');
       if (texto.startsWith('5.3.')) texto = '5.3. São aceitas as seguintes formas de pagamento: ' + config.formasPagamento + '.';

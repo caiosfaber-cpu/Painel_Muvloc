@@ -1,5 +1,5 @@
-/** Painel_Muvloc v05 — cadastro de clientes vinculado a uma Planilha Google. */
-const MUVLOC_VERSAO = 'v16';
+/** Painel_Muvloc v17 — cadastro de clientes vinculado a uma Planilha Google. */
+const MUVLOC_VERSAO = 'v17';
 const MUVLOC_ABA_ENDERECOS = 'EnderecosLocacao';
 const MUVLOC_CAB_ENDERECOS = ['ID', 'ID do cliente', 'Endereço de locação', 'Criado em'];
 const MUVLOC_ABA_CLIENTES = 'Clientes';

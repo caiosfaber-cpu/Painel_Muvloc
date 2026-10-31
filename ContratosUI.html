@@ -39,6 +39,7 @@ function nomeCategoria(id) { return categorias.find(c=>c.id===id)?.nome || 'Cate
 function cotacaoDados() {
   return {modalidade:$c('modalidade-orcamento').value,horaInicio:$c('contrato-hora-inicio').value,clienteId:$c('contrato-cliente').value, inicio:$c('contrato-inicio').value,
     enderecoLocacao:$c('contrato-endereco-locacao').value,horaFim:$c('contrato-hora-fim').value,
+    frete:$c('frete-orcamento').validity?.badInput?'inválido':$c('frete-orcamento').value,
     itens:[...selecaoOrcamento].map(([codigo,faixas])=>({codigo,faixas:faixas.slice(),quantidade:quantidadesOrcamento.get(codigo)??1})),
     desconto:{tipo:$c('desconto-tipo').value,
       valor:$c('desconto-tipo').value==='nenhum'?0:$c('desconto-valor').value}};
@@ -71,7 +72,7 @@ function limparOrcamento() {
   $c('contrato-hora-fim').value='18:00';$c('modalidade-orcamento').value='FIXO';$c('contrato-hora-inicio').value='09:00';atualizarModalidadeOrcamento();renderEnderecosContrato();
   $c('estoque-busca').value='';$c('estoque-categoria').value='';
   $c('escopo-orcamento').value='todos';$c('faixa-orcamento').value='diaria1';
-  $c('desconto-tipo').value='nenhum';$c('desconto-valor').value='';
+  $c('desconto-tipo').value='nenhum';$c('desconto-valor').value='';$c('frete-orcamento').value='0';
   descontoDoFormulario();atualizarAlvosOrcamento();renderEstoqueFiltrado();
   invalidarOrcamento();
 }
@@ -318,9 +319,10 @@ function renderCotacao(cotacao) {
     desconto.textContent=`Desconto (${rotulo}): − ${moedaContrato.format(cotacao.desconto.aplicado)}`;
     area.append(desconto);
   }
+  const frete=document.createElement('p');frete.textContent=`Frete: ${moedaContrato.format(cotacao.frete||0)}`;area.append(frete);
   const total=document.createElement('p');total.className='total-line';
   total.textContent=`Total do orçamento: ${moedaContrato.format(cotacao.total)} · último dia: ${encerramentoTexto(cotacao.fim,cotacao.horaFim)}`;
-  if(cotacao.modalidade==='ABERTO')total.textContent=`Referência de 1 diária após desconto: ${moedaContrato.format(cotacao.total)}. Valor final a apurar na devolução; sem data final.`;
+  if(cotacao.modalidade==='ABERTO')total.textContent=`Referência de 1 diária após desconto, com frete: ${moedaContrato.format(cotacao.total)}. Valor final a apurar na devolução; sem data final.`;
   area.append(total);
   const observacao=document.createElement('p');observacao.className='muted';
   observacao.textContent='O contrato será criado ao clicar em Confirmar contrato. A disponibilidade e os preços serão conferidos novamente.';
@@ -344,6 +346,7 @@ function renderOrcamentosSalvos() {
     resumo.textContent=`Local da locação: ${o.enderecoLocacao||o.endereco} · ${o.status==='CONVERTIDO'?'Contrato '+o.contratoId:'Pendente'} · início ${dataBR(o.inicio)} · até ${encerramentoTexto(o.fim,o.horaFim)} · ${moedaContrato.format(o.total)} · atualizado ${o.atualizadoEm}`;
     if(o.modalidade==='ABERTO')resumo.textContent=`${o.status==='CONVERTIDO'?'Contrato '+o.contratoId:'Pendente'} · PRAZO EM ABERTO · início ${dataBR(o.inicio)} às ${o.horaInicio} · valor final a apurar (referência 1 diária ${moedaContrato.format(o.total)}) · local: ${o.enderecoLocacao||o.endereco}`;
     card.append(resumo);
+    const frete=document.createElement('p');frete.textContent=`Frete: ${moedaContrato.format(o.frete||0)} (incluído no total)`;card.append(frete);
     if(o.desconto.tipo!=='nenhum'){
       const desconto=document.createElement('p');
       desconto.textContent=`Subtotal ${moedaContrato.format(o.subtotal)} · desconto ${moedaContrato.format(o.desconto.aplicado)}`;
@@ -412,6 +415,7 @@ function editarOrcamentoSalvo(o) {
   $c('contrato-cliente').value=o.clienteId;sincronizarClienteOrcamento();$c('contrato-inicio').value=o.inicio;
   $c('modalidade-orcamento').value=o.modalidade||'FIXO';$c('contrato-hora-inicio').value=o.horaInicio||'09:00';atualizarModalidadeOrcamento();
   renderEnderecosContrato(o.enderecoLocacao||o.endereco);$c('contrato-hora-fim').value=o.horaFim||'18:00';
+  $c('frete-orcamento').value=String(o.frete||0);
   $c('desconto-tipo').value=o.desconto.tipo;
   $c('desconto-valor').value=o.desconto.tipo==='nenhum'?'':String(o.desconto.valor);
   descontoDoFormulario();
@@ -494,6 +498,7 @@ function renderListaContratos() {
     if(c.modalidade==='ABERTO'&&c.status==='ATIVO')detalhes.textContent=`PRAZO EM ABERTO · início ${dataBR(c.inicio)} às ${c.horaInicio} · sem término definido · valor final a apurar (referência ${moedaContrato.format(c.total)})`;
     else if(c.modalidade==='ABERTO')detalhes.textContent+=' · fechamento de prazo em aberto';
     card.append(detalhes);
+    const frete=document.createElement('p');frete.textContent=`Frete: ${moedaContrato.format(c.frete||0)} (incluído no total)`;card.append(frete);
     if(c.desconto && c.desconto.tipo!=='nenhum'){
       const d=document.createElement('p');
       d.textContent=`Subtotal ${moedaContrato.format(c.subtotal)} · desconto ${moedaContrato.format(c.desconto.aplicado)} · total ${moedaContrato.format(c.total)}`;
@@ -601,11 +606,11 @@ async function abrirRenegociacao(contrato) {
     const baixar=(id)=>executar(async()=>{baixarArquivoPDF(await chamar('gerarPDFRenegociacao',contrato.id,id));aviso.textContent='PDF pronto.';});
     if(h.modo==='UNIFICADO')historicoArea.append(botao('Baixar orçamento unificado','secondary',()=>baixar('UNIFICADO')));
     const lista=document.createElement('div');lista.className='renegociacao-lista';historicoArea.append(lista);
-    const original=document.createElement('p');original.textContent=`Orçamento original · ${moedaContrato.format(h.original.total)}${contrato.modalidade==='ABERTO'?' (referência)':''}`;original.append(' ',botao('PDF original','secondary',()=>baixar('ORIGINAL')));lista.append(original);
+    const original=document.createElement('p');original.textContent=`Orçamento original · ${moedaContrato.format(h.original.total)} · frete ${moedaContrato.format(h.original.frete||0)}${contrato.modalidade==='ABERTO'?' (referência)':''}`;original.append(' ',botao('PDF original','secondary',()=>baixar('ORIGINAL')));lista.append(original);
     h.propostas.forEach(r=>{
       const item=document.createElement('article');item.className='quote-line';
       const nome=document.createElement('strong');nome.textContent=`${r.id} · ${r.status}`;
-      const valor=document.createElement('p');valor.textContent=`${r.criadoEm} · ${moedaContrato.format(r.cotacao.total)}${contrato.modalidade==='ABERTO'?' (referência)':''}`;
+      const valor=document.createElement('p');valor.textContent=`${r.criadoEm} · ${moedaContrato.format(r.cotacao.total)} · frete ${moedaContrato.format(r.cotacao.frete||0)}${contrato.modalidade==='ABERTO'?' (referência)':''}`;
       item.append(nome,valor);
       r.cotacao.itens.forEach(i=>{const p=document.createElement('p');p.textContent=`${i.novo?'Novo equipamento':'Período adicional'} · ${i.categoria} · ${rotuloItemContrato(i)} · ${i.diarias} diárias · ${dataBR(i.inicio)} → ${i.fim?dataBR(i.fim):'Em aberto'} · ${moedaContrato.format(i.subtotal)}`;item.append(p);});
       item.append(botao('Baixar PDF','secondary',()=>baixar(r.id)));
@@ -656,8 +661,9 @@ async function abrirRenegociacao(contrato) {
     });sec.append(adicionarNovo);
     const descontoTipo=campo('Desconto do orçamento adicional','select');[['nenhum','Sem desconto'],['valor','Valor em reais'],['percentual','Porcentagem']].forEach(([v,t])=>opcao(descontoTipo,v,t));
     const descontoValor=campo('Valor do desconto','number','0');descontoValor.min='0';descontoValor.step='0.01';if(aberto){descontoTipo.parentElement.hidden=true;descontoValor.parentElement.hidden=true;}
+    const freteAdicional=campo('Frete adicional deste orçamento (R$)','number','0');freteAdicional.min='0';freteAdicional.step='0.01';freteAdicional.addEventListener('input',invalidar);
     [inicio,hora,descontoTipo,descontoValor].forEach(el=>el.addEventListener('change',invalidar));
-    function dados(){return {existentes:[...existentes].map(([itemId,faixas])=>({itemId,faixas:faixas.slice()})),novos:[...novos.values()],inicioNovos:inicio.value,horaInicioNovos:hora.value,desconto:{tipo:descontoTipo.value,valor:Number(descontoValor.value)}};}
+    function dados(){return {existentes:[...existentes].map(([itemId,faixas])=>({itemId,faixas:faixas.slice()})),novos:[...novos.values()],inicioNovos:inicio.value,horaInicioNovos:hora.value,frete:freteAdicional.validity?.badInput?'inválido':freteAdicional.value,desconto:{tipo:descontoTipo.value,valor:Number(descontoValor.value)}};}
     function renderItens(){
       lista.replaceChildren();
       existentes.forEach((fs,id)=>{const i=contrato.itens.find(i=>i.id===id),p=document.createElement('p');p.textContent=`${i.categoria} · ${rotuloItemContrato(i)} · + ${fs.map(f=>periodoContrato(f)[1]).join(' + ')}`;p.append(' ',botao('Remover último','secondary',()=>{fs.pop();if(!fs.length)existentes.delete(id);invalidar();renderItens();}));lista.append(p);});
@@ -666,7 +672,7 @@ async function abrirRenegociacao(contrato) {
     const calcular=botao('Calcular orçamento adicional','secondary',()=>executar(async()=>{
       const token=revisao,q=await chamar('calcularRenegociacao',contrato.id,dados());if(token!==revisao||!dialog.open)return;
       cotacao=q;resumo.replaceChildren();q.itens.forEach(i=>{const p=document.createElement('p');p.textContent=`${i.categoria} · ${rotuloItemContrato(i)} · ${i.diarias} diárias · ${dataBR(i.inicio)} → ${i.fim?dataBR(i.fim):'Em aberto'} · ${moedaContrato.format(i.subtotal)}`;resumo.append(p);if(i.alertaManutencao){const a=document.createElement('p');a.className='erro';a.textContent='Atenção: o período exige acompanhamento da manutenção deste equipamento.';resumo.append(a);}});
-      const total=document.createElement('strong');total.textContent=`Subtotal ${moedaContrato.format(q.subtotal)} · desconto ${moedaContrato.format(q.desconto.aplicado)} · total ${moedaContrato.format(q.total)}${aberto?' (referência)':''}`;resumo.append(total);salvar.disabled=false;aviso.textContent='Confira e salve a proposta para gerar seu PDF ou confirmar no contrato.';
+      const total=document.createElement('strong');total.textContent=`Subtotal ${moedaContrato.format(q.subtotal)} · desconto ${moedaContrato.format(q.desconto.aplicado)} · frete ${moedaContrato.format(q.frete||0)} · total ${moedaContrato.format(q.total)}${aberto?' (referência)':''}`;resumo.append(total);salvar.disabled=false;aviso.textContent='Confira e salve a proposta para gerar seu PDF ou confirmar no contrato.';
     }));sec.append(lista,calcular,resumo,salvar);
   }
   try{await carregarHistorico();}catch(e){aviso.textContent=e.message||'Falha ao carregar histórico.';aviso.className='erro';}
@@ -736,7 +742,7 @@ $c('calcular-fechamento-aberto').addEventListener('click',async()=>{
     fechamentoCalculado=f;const area=$c('resumo-fechamento-aberto');area.replaceChildren();
     const resumo=document.createElement('p');resumo.textContent=`${f.diarias} diárias utilizadas · devolução ${encerramentoTexto(f.fim,f.horaFim)}`;area.append(resumo);
     f.itens.forEach(i=>{const p=document.createElement('p');p.textContent=`${i.categoria} · ${rotuloItemContrato(i)} · ${i.blocos.map(rotuloBlocoContrato).join(' + ')} · ${i.diariasCobertas} diárias cobertas · ${moedaContrato.format(i.subtotal)}`;area.append(p);adicionarNotaLimpeza(area,i);});
-    const total=document.createElement('p');total.className='total-line';total.textContent=`Subtotal ${moedaContrato.format(f.subtotal)} · desconto ${moedaContrato.format(f.desconto.aplicado)} · total final ${moedaContrato.format(f.total)}`;area.append(total);
+    const total=document.createElement('p');total.className='total-line';total.textContent=`Subtotal ${moedaContrato.format(f.subtotal)} · desconto ${moedaContrato.format(f.desconto.aplicado)} · frete ${moedaContrato.format(f.frete||0)} · total final ${moedaContrato.format(f.total)}`;area.append(total);
     $c('confirmar-fechamento-aberto').disabled=false;$c('aviso-fechamento-aberto').textContent='Confira o cálculo. O estoque só será liberado ao confirmar.';
   }catch(e){if(revisao===revisaoFechamento){invalidarFechamentoAberto();$c('aviso-fechamento-aberto').textContent=e.message||'Falha ao calcular.';}}
   finally{$c('calcular-fechamento-aberto').disabled=false;}
@@ -756,6 +762,7 @@ $c('contrato-hora-fim').addEventListener('input',invalidarOrcamento);
 $c('contrato-inicio').addEventListener('change',invalidarOrcamento);
 $c('desconto-tipo').addEventListener('change',descontoDoFormulario);
 $c('desconto-valor').addEventListener('input',invalidarOrcamento);
+$c('frete-orcamento').addEventListener('input',invalidarOrcamento);
 $c('estoque-busca').addEventListener('input',renderEstoqueFiltrado);
 $c('estoque-categoria').addEventListener('change',renderEstoqueFiltrado);
 $c('orcamentos-busca').addEventListener('input',renderOrcamentosSalvos);
@@ -801,7 +808,7 @@ $c('calcular-orcamento').addEventListener('click',async()=>{
 });
 $c('cancelar-orcamento').addEventListener('click',()=>{
   const preenchido=selecaoOrcamento.size||$c('contrato-cliente').value||$c('contrato-cliente-busca').value||$c('contrato-inicio').value||
-    $c('desconto-valor').value||orcamentoConfirmado;
+    $c('desconto-valor').value||Number($c('frete-orcamento').value)||orcamentoConfirmado;
   if(preenchido&&!confirm('Cancelar e apagar os dados deste orçamento?'))return;
   limparOrcamento();avisoContratos('Orçamento cancelado; campos e seleção limpos.','sucesso');
 });

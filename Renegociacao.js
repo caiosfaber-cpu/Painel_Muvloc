@@ -31,7 +31,7 @@ function assinaturaContratoRenegociacao_(c,itens) {
 function cotacaoBaseRenegociacao_(c,itens) {
   return {contratoId:c.id,cliente:c.cliente,documento:c.documento,telefone:c.telefone,endereco:c.endereco,enderecoLocacao:c.enderecoLocacao,
     inicio:c.inicio,horaInicio:c.horaInicio,horaFim:c.horaFim,fuso:c.fuso,modalidade:c.modalidade,fim:c.fim,
-    subtotal:c.subtotal,desconto:c.desconto,total:c.total,itens:itens.map(i=>({...i,inicio:i.blocos[0]?.inicioLocacao||c.inicio}))};
+    subtotal:c.subtotal,desconto:c.desconto,frete:validarFrete_(c.frete),total:c.total,itens:itens.map(i=>({...i,inicio:i.blocos[0]?.inicioLocacao||c.inicio}))};
 }
 function validarNovosRenegociacao_(entradas) {
   const abas=abasEquipamentos_(),cats=lerCategorias_(abas.cats),units=lerUnidades_(abas.unidades);
@@ -80,11 +80,12 @@ function calcularRenegociacao_(id,dados) {
   });
   const subtotal=somarValores_(adicionais.map(i=>i.subtotal));
   const desconto=aberto?descontoPrazoAberto_(subtotal,{tipo:'nenhum',valor:0}):calcularDesconto_(subtotal,dados.desconto);
+  const frete=validarFrete_(dados.frete);
   const base=cotacaoBaseRenegociacao_(c,itens),cotacao={...base,itens:adicionais,inicio:adicionais.map(i=>i.inicio).sort()[0],
-    fim:adicionais.map(i=>i.fim).sort().at(-1),horaInicio:aberto?horaInicioNovos:base.horaInicio,subtotal,desconto,total:desconto.total,
+    fim:adicionais.map(i=>i.fim).sort().at(-1),horaInicio:aberto?horaInicioNovos:base.horaInicio,subtotal,desconto,frete,total:somarValores_([desconto.total,frete]),
     contratoId:id,observacaoPDF:'Orçamento adicional do contrato '+id+'. Só a confirmação desta proposta altera o contrato e reserva os novos equipamentos.'};
   cotacao.assinaturaContrato=assinaturaContratoRenegociacao_(c,itens);
-  cotacao.assinatura=JSON.stringify([cotacao.assinaturaContrato,adicionais,subtotal,desconto]);
+  cotacao.assinatura=JSON.stringify([cotacao.assinaturaContrato,adicionais,subtotal,desconto,frete]);
   return cotacao;
 }
 function calcularRenegociacao(id,dados) {return calcularRenegociacao_(id,dados);}
@@ -142,6 +143,7 @@ function confirmarRenegociacao(id) {
       const fim=c.modalidade==='ABERTO'?'':[c.fim,...q.itens.map(i=>i.fim)].sort().at(-1);
       abas.contratos.getRange(c.linha,9,1,2).setValues([[total,fim]]);
       abas.contratos.getRange(c.linha,14,1,4).setValues([[subtotal,c.modalidade==='ABERTO'?c.desconto.tipo:(aplicado?'valor':'nenhum'),c.modalidade==='ABERTO'?c.desconto.valor:aplicado,aplicado]]);
+      abas.contratos.getRange(c.linha,23).setValue(somarValores_([validarFrete_(c.frete),validarFrete_(q.frete)]));
       abas.contratos.getRange(c.linha,12).setValue(new Date());
       aba.getRange(r.linha,4).setValue('CONFIRMADO');SpreadsheetApp.flush();
       return {id:c.id,total,fim};

@@ -3,7 +3,7 @@ const ABA_ORCAMENTOS = 'Orcamentos';
 const ABA_ITENS_ORCAMENTO = 'ItensOrcamento';
 const CAB_ORCAMENTOS = ['ID', 'ID cliente', 'Cliente', 'CPF/CNPJ', 'Telefone', 'Endereço',
   'Início', 'Último dia', 'Subtotal', 'Tipo desconto', 'Valor desconto',
-  'Desconto aplicado', 'Total', 'Status', 'ID contrato', 'Versão', 'Criado em', 'Atualizado em', 'Endereço de locação', 'Horário de encerramento', 'Modalidade', 'Horário de início', 'Fuso horário'];
+  'Desconto aplicado', 'Total', 'Status', 'ID contrato', 'Versão', 'Criado em', 'Atualizado em', 'Endereço de locação', 'Horário de encerramento', 'Modalidade', 'Horário de início', 'Fuso horário', 'Frete'];
 const CAB_ITENS_ORCAMENTO = ['ID', 'ID orçamento', 'Código unidade', 'ID categoria',
   'Categoria', 'Períodos JSON', 'Diárias', 'Último dia', 'Subtotal', 'Quantidade', 'Taxa de limpeza (%)', 'Tarifas de prazo aberto JSON'];
 const PROP_SEQ_ORCAMENTOS = 'ORCAMENTO_SEQUENCE';
@@ -11,11 +11,13 @@ const PROP_SEQ_ORCAMENTOS = 'ORCAMENTO_SEQUENCE';
 function configurarOrcamentos_(planilha) {
   ampliarCabecalho_(planilha, ABA_ORCAMENTOS, CAB_ORCAMENTOS, 18);
   ampliarCabecalho_(planilha, ABA_ORCAMENTOS, CAB_ORCAMENTOS, 20);
+  ampliarCabecalho_(planilha, ABA_ORCAMENTOS, CAB_ORCAMENTOS, 23);
   const orcamentos = prepararAba_(planilha, ABA_ORCAMENTOS, CAB_ORCAMENTOS,
     ['A:H', 'J:K', 'N:O', 'S:T'], 'M:M');
   corrigirColunaHoraLocacao_(orcamentos, 20);
   orcamentos.getRange('U:W').setNumberFormat('@');
   orcamentos.getRange('I:I').setNumberFormat('"R$" #,##0.00');
+  orcamentos.getRange('X:X').setNumberFormat('"R$" #,##0.00');
   orcamentos.getRange('L:L').setNumberFormat('"R$" #,##0.00');
   ampliarCabecalho_(planilha, ABA_ITENS_ORCAMENTO, CAB_ITENS_ORCAMENTO, 9);
   ampliarCabecalho_(planilha, ABA_ITENS_ORCAMENTO, CAB_ITENS_ORCAMENTO, 10);
@@ -47,7 +49,7 @@ function lerOrcamentos_(aba) {
         aplicado: Number(v[11]) }, total: Number(v[12]), status: String(v[13]),
       contratoId: String(v[14] || ''), versao: Number(v[15]), criado: v[16],
       atualizado: v[17], enderecoLocacao: String(v[18] || v[5]), horaFim: lerHoraLocacao_(v[19], exibidos[i][19]), modalidade: String(v[20] || 'FIXO'),
-      horaInicio: String(v[21] || ''), fuso: String(v[22] || Session.getScriptTimeZone()) })).filter(o => o.id);
+      horaInicio: String(v[21] || ''), fuso: String(v[22] || Session.getScriptTimeZone()), frete: validarFrete_(v[23]) })).filter(o => o.id);
 }
 
 function lerItensOrcamento_(aba) {
@@ -80,7 +82,7 @@ function listarOrcamentosSalvos() {
     id: o.id, versao: o.versao, clienteId: o.clienteId, cliente: o.cliente,
     documento: o.documento, telefone: o.telefone, endereco: o.endereco,
     modalidade: o.modalidade, horaInicio: o.horaInicio, fuso: o.fuso, inicio: o.inicio, fim: o.fim, enderecoLocacao: o.enderecoLocacao, horaFim: o.horaFim, subtotal: o.subtotal, desconto: o.desconto,
-    total: o.total, status: o.status, contratoId: o.contratoId,
+    total: o.total, frete: o.frete, status: o.status, contratoId: o.contratoId,
     atualizadoEm: o.atualizado instanceof Date ?
       Utilities.formatDate(o.atualizado, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm') : '',
     itens: linhas.filter(i => i.orcamentoId === o.id).map(i => ({
@@ -118,7 +120,7 @@ function salvarOrcamento(dados) {
       proteger_(cotacao.telefone), proteger_(cotacao.endereco), cotacao.inicio,
       cotacao.fim, cotacao.subtotal, cotacao.desconto.tipo, cotacao.desconto.valor,
       cotacao.desconto.aplicado, cotacao.total, 'PENDENTE', '',
-      versao, atual ? atual.criado : agora, agora, proteger_(cotacao.enderecoLocacao), cotacao.horaFim, cotacao.modalidade, cotacao.horaInicio, cotacao.fuso
+      versao, atual ? atual.criado : agora, agora, proteger_(cotacao.enderecoLocacao), cotacao.horaFim, cotacao.modalidade, cotacao.horaInicio, cotacao.fuso, cotacao.frete
     ]]);
     if (atual) lerItensOrcamento_(abas.itens).filter(i => i.orcamentoId === id)
       .sort((a, b) => b.linha - a.linha).forEach(i => abas.itens.deleteRow(i.linha));
@@ -155,7 +157,7 @@ function confirmarOrcamentoSalvo(id, versao) {
     const itens = lerItensOrcamento_(abas.itens).filter(i => i.orcamentoId === id);
     if (!itens.length) throw new Error('Orçamento sem equipamentos. Edite e salve novamente.');
     const dados = { clienteId: atual.clienteId, inicio: atual.inicio, modalidade: atual.modalidade, horaInicio: atual.horaInicio, fuso: atual.fuso,
-      enderecoLocacao: atual.enderecoLocacao, horaFim: atual.horaFim || '18:00',
+      enderecoLocacao: atual.enderecoLocacao, horaFim: atual.horaFim || '18:00', frete: atual.frete,
       desconto: { tipo: atual.desconto.tipo, valor: atual.desconto.valor },
       itens: itens.map(i => ({ codigo: i.codigo, quantidade: i.quantidade, faixas: i.blocos.map(b => b.faixa) })),
       totalEsperado: atual.total };

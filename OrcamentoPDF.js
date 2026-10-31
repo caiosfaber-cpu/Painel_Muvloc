@@ -60,6 +60,7 @@ function gerarPDFOrcamentoDeCotacao_(orcamento) {
         String(orcamento.desconto.valor).replace('.', ',') + '%' : moedaPDF_(orcamento.desconto.valor);
       paragrafoPDF_(corpo, 'Desconto (' + criterio + '): - ' + moedaPDF_(orcamento.desconto.aplicado));
     }
+    paragrafoPDF_(corpo, 'Frete: ' + moedaPDF_(validarFrete_(orcamento.frete)));
     const total = paragrafoPDF_(corpo, (aberto?'REFERÊNCIA DE 1 DIÁRIA — TOTAL FINAL A APURAR: ':'TOTAL DO ORÇAMENTO: ') + moedaPDF_(orcamento.total));
     total.editAsText().setBold(true).setFontSize(15).setForegroundColor('#000000');
     paragrafoPDF_(corpo, 'Taxas de limpeza condicionais — não incluídas no total:').editAsText().setFontSize(9);

@@ -82,10 +82,11 @@ function calcularFechamentoAberto_(c,itens,dados,agora) {
     return {...i,...preco,diarias:diariasItem,subtotal,fim,limpezaCondicional:Math.round(subtotal*i.taxaLimpeza)/100};
   });
   const subtotal=somarValores_(calculados.map(i=>i.subtotal)),desconto=descontoPrazoAberto_(subtotal,c.desconto);
+  const frete=validarFrete_(c.frete),total=somarValores_([desconto.total,frete]);
   return {id:c.id,cliente:c.cliente,inicio:c.inicio,horaInicio:c.horaInicio,fuso:c.fuso,fim,horaFim,diarias,
-    modalidade:'ABERTO',itens:calculados,subtotal,desconto,total:desconto.total,
+    modalidade:'ABERTO',itens:calculados,subtotal,desconto,frete,total,
     assinaturaFechamento:JSON.stringify([c.id,c.inicio,c.horaInicio,c.fuso,c.desconto,fim,horaFim,
-      itens.map(i=>[i.id,i.codigo,i.quantidade,i.tarifas,i.taxaLimpeza,i.blocos[0]?.inicioLocacao,i.blocos[0]?.horaInicioLocacao]),subtotal,desconto.total])};
+      itens.map(i=>[i.id,i.codigo,i.quantidade,i.tarifas,i.taxaLimpeza,i.blocos[0]?.inicioLocacao,i.blocos[0]?.horaInicioLocacao]),subtotal,total])};
 }
 function calcularFechamentoAberto(id,dados) {
   if(!dados || typeof dados!=='object')throw new Error('Informe a data e hora de devolução.');
@@ -113,7 +114,7 @@ function fecharContratoAberto(id,dados) {
     return {id:c.id,total:fechamento.total,fim:fechamento.fim,horaFim:fechamento.horaFim};
   } finally {lock.releaseLock();}
 }
-const TEXTO_PRAZO_ABERTO = 'Locação por prazo em aberto, sem data final previamente definida. O valor final será apurado na devolução ou disponibilização efetiva dos equipamentos, informando data e hora. Para equipamentos incluídos posteriormente, a apuração começa na data e hora de entrada registradas para cada item. Cada período iniciado de 24 horas desde o início registrado conta como uma diária, com mínimo de uma diária. O sistema escolherá, para cada equipamento, a combinação de tarifas registrada na contratação de menor preço que cubra o tempo utilizado; um pacote maior poderá ser aplicado quando for mais econômico, sem prolongar o uso dos equipamentos. Semana = 7 dias, quinzena = 15 dias, 21 diárias = 21 dias e mensal = 30 dias. Descontos registrados serão aplicados no fechamento, limitados ao subtotal. Taxas de limpeza permanecem condicionais, calculadas sobre as diárias antes do desconto e cobradas à parte. Enquanto a locação estiver ativa, os equipamentos permanecerão reservados.';
+const TEXTO_PRAZO_ABERTO = 'Locação por prazo em aberto, sem data final previamente definida. O valor final será apurado na devolução ou disponibilização efetiva dos equipamentos, informando data e hora. Para equipamentos incluídos posteriormente, a apuração começa na data e hora de entrada registradas para cada item. Cada período iniciado de 24 horas desde o início registrado conta como uma diária, com mínimo de uma diária. O sistema escolherá, para cada equipamento, a combinação de tarifas registrada na contratação de menor preço que cubra o tempo utilizado; um pacote maior poderá ser aplicado quando for mais econômico, sem prolongar o uso dos equipamentos. Semana = 7 dias, quinzena = 15 dias, 21 diárias = 21 dias e mensal = 30 dias. Descontos registrados serão aplicados às diárias no fechamento, limitados ao subtotal. O frete registrado é somado uma única vez ao total, sem desconto e sem integrar a base da taxa de limpeza. Taxas de limpeza permanecem condicionais, calculadas sobre as diárias antes do desconto e cobradas à parte. Enquanto a locação estiver ativa, os equipamentos permanecerão reservados.';
 function tarifasPrazoAbertoPDF_(corpo,itens,titulo,tabela,moeda) {
   const grupos=new Map();
   itens.forEach(i=>{const chave=JSON.stringify([i.categoriaId,i.tarifas]);if(!grupos.has(chave))grupos.set(chave,i);});
